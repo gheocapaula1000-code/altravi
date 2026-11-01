@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Altravì — ogni scelta ha un altrimenti</title>
+<meta name="description" content="Scrivi una scelta. Altravì ti mostra le porte, con ricerche vere accanto, e poi la realtà che hai scelto comincia a crescere.">
+<meta name="theme-color" content="#05060f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Altravì">
+<link rel="stylesheet" href="css/app.css">
+<script src="js/lang-boot.js"></script>
+</head>
+<body>
+<a class="skip" href="#view" data-i18n="skip">Vai al contenuto</a>
+<div class="stars" aria-hidden="true"></div>
+<header class="top">
+  <a class="wordmark" href="#/" data-i18n-aria="brand.home" aria-label="Altravì, home">Altravì</a>
+  <div class="top-actions">
+    <select class="icon-btn lang-btn" id="langSel" aria-label="Lingua"></select>
+    <button class="icon-btn" id="textSize" type="button" aria-pressed="false"><span aria-hidden="true">A+</span><span class="sr" id="textSizeLbl">Testo più grande</span></button>
+    <a class="icon-btn" href="#/impostazioni" data-nav="settings" data-i18n-aria="nav.settings" aria-label="Impostazioni">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </a>
+  </div>
+</header>
+<main id="view" tabindex="-1"><noscript><p>Altravì ha bisogno di JavaScript per funzionare. Attivalo e riapri la pagina. / Altravì needs JavaScript to work. Turn it on and reload.</p></noscript></main>
+<nav class="tabs" id="tabs" data-i18n-aria="nav.aria" aria-label="Navigazione principale">
+  <a href="#/" data-nav="lines"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 3v7M12 10c0 4-6 4-6 11M12 10c0 4 6 4 6 11"/></svg><span data-i18n="nav.lines">Linee</span></a>
+  <a href="#/nuovo" data-nav="new" class="plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="nav.new">Nuovo</span></a>
+  <a href="#/cielo" data-nav="sky"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 1.9 5.2L19 10l-5.1 1.8L12 17l-1.9-5.2L5 10l5.1-1.8z"/><circle cx="19" cy="19" r="1"/><circle cx="5" cy="19" r="1"/></svg><span data-i18n="nav.sky">Cielo</span></a>
+  <a href="#/risonanze" data-nav="echo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="10"/></svg><span data-i18n="nav.echo">Risonanze</span></a>
+</nav>
+<footer class="site-footer" role="contentinfo">
+  <div class="footer-in">
+    <div>
+      <p class="f-brand">Pi.Gi Service</p>
+      <address>
+        Via Guido Reni 8, 35133 Padova (PD)<br>
+        P.IVA 05770260288<br>
+        <a href="mailto:info@pigiservice.com">info@pigiservice.com</a><br>
+        PEC: <a href="mailto:pigiservice@pec.it">pigiservice@pec.it</a><br>
+        Tel. <a href="tel:+393520966114">+39 352 0966114</a>
+      </address>
+    </div>
+    <nav data-i18n-aria="footer.aria" aria-label="Informazioni legali">
+      <a href="privacy.html" data-i18n="footer.privacy">Privacy</a>
+      <a href="termini.html" data-i18n="footer.terms">Termini</a>
+      <a href="cookie.html" data-i18n="footer.cookie">Cookie</a>
+    </nav>
+  </div>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
