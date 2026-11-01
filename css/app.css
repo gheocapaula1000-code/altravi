@@ -441,3 +441,4 @@ details.more .chips{margin-top:.4rem}
 .hero .row{margin-top:.1rem}
 @media (max-height:900px){.hero .lead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;margin:0}}
 .hero h2.ask-q{margin:.4rem 0 .55rem}
+.ai-wait .ai-wait-h{text-align:center;font-size:clamp(1.4rem,5.5vw,1.9rem);margin:.4rem 0 .6rem}.ai-wait .muted,.ai-wait .think-live{text-align:center;max-width:28rem;margin-inline:auto}.ai-actions-one{display:flex;justify-content:center;margin:1.2rem 0 0}

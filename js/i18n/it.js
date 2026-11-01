@@ -372,4 +372,9 @@ export default {
   'ai.engine.val': "Locale e predefinito. Un'AI solo come riserva, solo se acconsenti.",
   'ask.quote1': "Il battito d’ali di una farfalla può cambiare il mondo.",
   'ask.quote2': 'Una cena può cambiarti la vita.',
+  'ai.wait.title': 'Cerco due strade su misura per te',
+  'ai.wait.sub': 'Di solito bastano pochi secondi. Se preferisci non aspettare, resta pure sul telefono: ti do subito un consiglio.',
+  'ai.wait.long': 'Ci vuole un attimo in più del solito. Grazie della pazienza: sto scrivendo qualcosa di tuo.',
+  'ai.stay': 'Resta sul telefono',
+  'ai.stay.now': 'Va bene, ecco il consiglio sul telefono…',
 };

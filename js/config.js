@@ -6,5 +6,5 @@ export const AI = {
   enabled: true,
   endpoint: 'https://jpunnzgixcghuydstdlt.supabase.co/functions/v1/core-proxy',
   route: 'altravi/ask',
-  timeoutMs: 15000,
+  timeoutMs: 26000,
 };

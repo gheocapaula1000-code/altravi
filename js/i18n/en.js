@@ -370,4 +370,9 @@ export default {
   'ai.engine.val': 'Local and the default. An AI only as a backup, only if you agree.',
   'ask.quote1': "The flap of a butterfly’s wings can change the world.",
   'ask.quote2': 'A dinner can change your life.',
+  'ai.wait.title': 'Looking for two paths made for you',
+  'ai.wait.sub': 'It usually takes a few seconds. If you would rather not wait, just stay on your phone: I will give you advice right away.',
+  'ai.wait.long': 'It is taking a moment longer than usual. Thank you for your patience: I am writing something just for you.',
+  'ai.stay': 'Stay on my phone',
+  'ai.stay.now': 'All right, here is the advice on your phone…',
 };

@@ -121,6 +121,20 @@ function viewAsk(query) {
   if (!prefersReduced() && !quiet) setTimeout(() => { if (document.activeElement === document.body || document.activeElement === view || view.contains(document.activeElement)) ta.focus({ preventScroll: true }); }, 700);
 }
 
+/** Attesa dell'AI: breve, rassicurante, con una via d'uscita sempre visibile («Resta sul telefono» → consiglio locale subito). */
+function mountAiWait(ctl, isGone) {
+  const live = h('p', { class: 'think-live', role: 'status', 'aria-live': 'polite' }, t('ai.wait'));
+  const stay = h('button', { class: 'btn primary big', type: 'button', id: 'aiStay', onclick: () => { stay.disabled = true; live.textContent = t('ai.stay.now'); ctl.abort(); } }, t('ai.stay'));
+  mount(h('section', { class: 'think ai-wait' }, h('div', { class: 'think-in' },
+    h('div', { class: 'lightline', 'aria-hidden': 'true' }),
+    h('h1', { class: 'ai-wait-h' }, t('ai.wait.title')),
+    live,
+    h('p', { class: 'muted' }, t('ai.wait.sub')),
+    h('p', { class: 'ai-actions-one' }, stay))));
+  setTimeout(() => stay.focus({ preventScroll: true }), 50);
+  setTimeout(() => { if (!isGone() && !ctl.signal.aborted) live.textContent = t('ai.wait.long'); }, 9000);
+}
+
 /** Consenso esplicito prima che il testo lasci il telefono: mostra ESATTAMENTE cosa verrebbe inviato. */
 function askAiConsent(text) {
   return new Promise(resolve => {
@@ -146,7 +160,7 @@ function askAiConsent(text) {
 async function viewThink() {
   if (!pendingText) { go('#/nuovo'); return; }
   const job = pendingText;
-  let done = false, timer;
+  let done = false, timer, ctl = null, left = false;
   const reduced = prefersReduced();
   const pv = preview(job.text);
   const words = job.text.split(/\s+/).slice(0, 14);
@@ -163,9 +177,10 @@ async function viewThink() {
           if (ch === 'always' || ch === 'never') store.setSetting('aiConsent', ch);
           useAI = ch === 'once' || ch === 'always';
         }
-        if (useAI) mount(h('section', { class: 'think' }, h('div', { class: 'think-in' }, h('div', { class: 'lightline', 'aria-hidden': 'true' }), h('p', { class: 'think-live', role: 'status' }, t('ai.wait')))));
+        if (useAI) { ctl = new AbortController(); mountAiWait(ctl, () => left); }
       }
-      const fs = await generateForksSmart({ text: job.text }, { useAI });
+      const fs = await generateForksSmart({ text: job.text }, { useAI, signal: ctl && ctl.signal });
+      if (left) return;   // l'utente ha cambiato schermata mentre aspettava: nessun salto a sorpresa
       store.setDraft(fs, job.parent);
       pendingText = null;
       go('#/porte');
@@ -186,7 +201,7 @@ async function viewThink() {
   )));
   const total = 1000 + Math.min(chipEls.length, 4) * 80;
   timer = setTimeout(finish, reduced || quiet ? 400 : total);
-  cleanup.push(() => { done = true; clearTimeout(timer); });
+  cleanup.push(() => { done = true; left = true; clearTimeout(timer); if (ctl) ctl.abort(); });
 }
 
 /* ───────── vista: le porte ───────── */

@@ -50,9 +50,13 @@ export function validateAiResult(r) {
 }
 
 /** Chiede il consiglio al Core (via core-proxy). Lancia AiError per qualsiasi problema: il chiamante ricade sul motore locale. */
-export async function askAI(text, lang, { fetchImpl = (typeof fetch === 'function' ? fetch : null), timeoutMs = AI.timeoutMs } = {}) {
+export async function askAI(text, lang, { fetchImpl = (typeof fetch === 'function' ? fetch : null), timeoutMs = AI.timeoutMs, signal } = {}) {
   if (!AI.enabled || !AI.endpoint || !fetchImpl) fail('AI non attiva');
+  if (signal && signal.aborted) fail('annullato');
   const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+  // «Resta sul telefono»: l'utente può interrompere l'attesa in qualsiasi momento
+  let byUser = false;
+  if (signal && ctl) signal.addEventListener('abort', () => { byUser = true; ctl.abort(); }, { once: true });
   const timer = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : null;
   try {
     const res = await fetchImpl(AI.endpoint, {
@@ -67,7 +71,7 @@ export async function askAI(text, lang, { fetchImpl = (typeof fetch === 'functio
     return validateAiResult(data.data.result);
   } catch (e) {
     if (e instanceof AiError) throw e;
-    throw new AiError(e && e.name === 'AbortError' ? 'timeout' : 'rete');
+    throw new AiError(e && e.name === 'AbortError' ? (byUser ? 'annullato' : 'timeout') : 'rete');
   } finally { if (timer) clearTimeout(timer); }
 }
 

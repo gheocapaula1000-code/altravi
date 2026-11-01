@@ -15,7 +15,7 @@ registerEngine(localEngine);
 registerEngine({
   id: 'ai',
   label: 'Consiglio AI di riserva (facoltativo)',
-  async generate({ text, lang }) { return buildAiForkSet({ text, lang, result: await askAI(text, lang) }); },
+  async generate({ text, lang, signal }) { return buildAiForkSet({ text, lang, result: await askAI(text, lang, { signal }) }); },
 });
 
 /** Il testo può essere offerto all'AI? Solo se: AI attiva, online, il motore locale non lo riconosce (ripiego «generico»), lunghezza ok, niente crisi / temi da professionista / dati personali. */
@@ -30,9 +30,9 @@ export function aiEligible(text, k = classifyText(text)) {
 }
 
 /** Genera con l'AI solo se richiesto E consentito; qualunque errore o output respinto dal Mood Guard → motore locale. */
-export async function generateForksSmart(input, { useAI = false } = {}) {
+export async function generateForksSmart(input, { useAI = false, signal } = {}) {
   if (useAI && aiEligible(input.text)) {
-    try { return await generateForks(input, { engine: 'ai' }); } catch (e) { console.warn('[AI] ricaduta sul motore locale:', e && e.message); }
+    try { return await generateForks({ ...input, signal }, { engine: 'ai' }); } catch (e) { console.warn('[AI] ricaduta sul motore locale:', e && e.message); }
   }
   return generateForks(input);
 }
