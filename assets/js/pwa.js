@@ -1,16 +1,15 @@
-// PWA: registrazione del service worker, banner «Nuova versione», tira-per-aggiornare.
-// Nessun dato lascia il telefono: qui si parla solo con il service worker di questo sito.
-import { t, onLang } from './i18n/index.js';
+// PWA: service worker di Altravì (scope /), banner «Nuova versione disponibile», tira-per-aggiornare.
+// Stesso schema dell'app per le persone: il nuovo worker aspetta, «Aggiorna» invia SKIP_WAITING, si ricarica una sola volta al cambio di controller.
+import { t, onLang } from './i18n.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const THRESHOLD = 70;       // px di trascinamento (dopo la resistenza) per attivare
-const RESIST = 0.5;         // il dito fa il doppio del cammino dell'indicatore
+const THRESHOLD = 70;
+const RESIST = 0.5;
 const CHECK_EVERY = 30 * 60 * 1000;
 
-let reg = null;
-let wantReload = false;     // ricarica solo se l'utente ha chiesto di aggiornare
-let reloaded = false;
-let banner = null;
+let reg = null, wantReload = false, reloaded = false, banner = null;
+let softRefresh = async () => {};
+export const setSoftRefresh = f => { softRefresh = f; };
 
 function el(tag, attrs = {}, kids = []) {
   const n = document.createElement(tag);
@@ -18,8 +17,6 @@ function el(tag, attrs = {}, kids = []) {
   kids.forEach(k => n.append(k));
   return n;
 }
-
-/* ───────── banner nuova versione ───────── */
 function paintBanner() {
   if (!banner) return;
   banner.querySelector('strong').textContent = t('upd.msg');
@@ -28,9 +25,9 @@ function paintBanner() {
 }
 function showBanner() {
   if (banner) { banner.hidden = false; return; }
-  const btn = el('button', { type: 'button', class: 'btn primary' });
+  const btn = el('button', { type: 'button', class: 'btn primary', id: 'updBtn' });
   btn.addEventListener('click', applyUpdate);
-  banner = el('div', { class: 'upd', role: 'status', 'aria-live': 'polite' }, [
+  banner = el('div', { class: 'upd', id: 'updBanner', role: 'status', 'aria-live': 'polite' }, [
     el('div', { class: 'upd-t' }, [el('strong'), el('span', { class: 'upd-hint' })]), btn,
   ]);
   document.body.append(banner);
@@ -55,13 +52,12 @@ async function checkUpdate() {
   try { await reg.update(); } catch { /* offline: riproveremo */ }
 }
 
-/* ───────── tira per aggiornare ───────── */
+/* tira per aggiornare: controlla se c'è una versione nuova, poi rilegge i dati della schermata */
 function initPTR() {
   if (!('ontouchstart' in window) && !(navigator.maxTouchPoints > 0)) return;
-  const ind = el('div', { class: 'ptr', role: 'status', 'aria-live': 'polite' });
+  const ind = el('div', { class: 'ptr', id: 'ptr', role: 'status', 'aria-live': 'polite' });
   const arrow = document.createElementNS(SVG_NS, 'svg');
-  arrow.setAttribute('viewBox', '0 0 24 24'); arrow.setAttribute('fill', 'none'); arrow.setAttribute('stroke', 'currentColor');
-  arrow.setAttribute('stroke-width', '2.2'); arrow.setAttribute('stroke-linecap', 'round'); arrow.setAttribute('stroke-linejoin', 'round'); arrow.setAttribute('aria-hidden', 'true');
+  for (const [k, v] of Object.entries({ viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2.2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' })) arrow.setAttribute(k, v);
   const path = document.createElementNS(SVG_NS, 'path'); path.setAttribute('d', 'M12 5v14M6 13l6 6 6-6');
   arrow.append(path);
   const label = el('span');
@@ -69,14 +65,14 @@ function initPTR() {
   document.body.append(ind);
 
   let startY = 0, startX = 0, pulling = false, tracking = false, busy = false, dist = 0;
-
+  const enabled = () => document.body.dataset.ptr !== 'off';
   const blocked = target => {
-    if (document.querySelector('.reveal, .burst')) return true;
+    if (document.querySelector('dialog[open]')) return true;
     for (let n = target; n && n !== document.body && n.nodeType === 1; n = n.parentElement) {
       const tag = n.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || n.isContentEditable) return true;
       const oy = getComputedStyle(n).overflowY;
-      if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight) return true; // contenitore scorrevole interno
+      if ((oy === 'auto' || oy === 'scroll') && n.scrollHeight > n.clientHeight) return true;
     }
     return false;
   };
@@ -93,19 +89,17 @@ function initPTR() {
     ind.style.opacity = '0'; ind.style.transform = 'translate(-50%,-4rem)';
     pulling = false; tracking = false; dist = 0;
   };
-
   document.addEventListener('touchstart', e => {
-    if (busy || e.touches.length !== 1 || !atTop() || blocked(e.target)) { tracking = false; return; }
+    if (busy || !enabled() || e.touches.length !== 1 || !atTop() || blocked(e.target)) { tracking = false; return; }
     startY = e.touches[0].clientY; startX = e.touches[0].clientX; tracking = true; pulling = false; dist = 0;
     ind.classList.remove('snap');
   }, { passive: true });
-
   document.addEventListener('touchmove', e => {
     if (!tracking || busy) return;
     const dy = e.touches[0].clientY - startY, dx = e.touches[0].clientX - startX;
     if (!pulling) {
       if (dy < 0 || Math.abs(dx) > Math.abs(dy) || !atTop()) { if (dy < 0 || !atTop()) tracking = false; return; }
-      if (dy < 8) return;             // piccola zona morta: non scambiare un tocco per un gesto
+      if (dy < 8) return;
       pulling = true;
     }
     if (!atTop() && dy <= 0) { reset(); return; }
@@ -113,7 +107,6 @@ function initPTR() {
     if (e.cancelable) e.preventDefault();
     paint(dist);
   }, { passive: false });
-
   const end = async () => {
     if (!tracking) return;
     const go = pulling && dist >= THRESHOLD;
@@ -124,7 +117,11 @@ function initPTR() {
     label.textContent = t('ptr.loading');
     await Promise.race([checkUpdate(), new Promise(r => setTimeout(r, 3000))]);
     if (reg && reg.waiting) { wantReload = true; reg.waiting.postMessage({ type: 'SKIP_WAITING' }); setTimeout(() => location.reload(), 1500); return; }
-    location.reload();
+    try { await softRefresh(); } catch { /* ignore */ }
+    document.body.dataset.refreshed = String((+document.body.dataset.refreshed || 0) + 1);
+    label.textContent = t('ptr.done');
+    ind.classList.remove('busy');
+    setTimeout(() => { busy = false; reset(); }, 700);
   };
   document.addEventListener('touchend', end, { passive: true });
   document.addEventListener('touchcancel', () => { if (!busy) reset(); }, { passive: true });
@@ -136,10 +133,10 @@ export function initPWA() {
   if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
   const sw = navigator.serviceWorker;
   sw.addEventListener('controllerchange', () => {
-    if (!wantReload || reloaded) return;   // prima installazione o cambio non richiesto: nessuna ricarica
+    if (!wantReload || reloaded) return;
     reloaded = true; location.reload();
   });
-  sw.register('./sw.js').then(r => {
+  sw.register('./sw.js', { scope: './' }).then(r => {
     reg = r;
     if (r.waiting && sw.controller) showBanner();
     trackInstalling(r.installing);

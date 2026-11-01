@@ -1,17 +1,18 @@
 {
  "name": "Altravì",
  "short_name": "Altravì",
- "description": "Scrivi cosa devi decidere, anche la cosa più piccola: Altravì ti mostra le due strade e ti dà un consiglio chiaro.",
+ "description": "Il livello di allineamento tra team e cliente: aspettative scritte da entrambi, decisioni tracciate, verifica a ogni tappa, storico chiaro. Per agenzie, studi, consulenti e team prodotto.",
  "lang": "it",
  "dir": "ltr",
- "start_url": "./index.html#/",
- "scope": "./",
+ "id": "/",
+ "start_url": "/",
+ "scope": "/",
  "display": "standalone",
  "orientation": "any",
- "background_color": "#05060f",
- "theme_color": "#05060f",
+ "background_color": "#060912",
+ "theme_color": "#060912",
  "categories": [
-  "lifestyle",
+  "business",
   "productivity"
  ],
  "icons": [
@@ -38,16 +39,6 @@
    "sizes": "any",
    "type": "image/svg+xml",
    "purpose": "any"
-  }
- ],
- "shortcuts": [
-  {
-   "name": "Nuovo bivio",
-   "url": "./index.html#/nuovo"
-  },
-  {
-   "name": "Il tuo cielo",
-   "url": "./index.html#/cielo"
   }
  ]
 }
