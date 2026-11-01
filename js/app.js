@@ -3,6 +3,7 @@ import { store, DAY_MS } from './store.js';
 import { generateForks, generateForksSmart, aiEligible, classifyText, detectCrisis, forkSetFor, preview, nextAdvice, isDaily, dailyHorizons, DAILY_CATS, dailyExample, dailyColor } from './engine/index.js';
 import { dailySign, checkinText } from './engine/advice.js';
 import { AI } from './config.js';
+import { initPWA } from './pwa.js';
 import { content, evidence, HORIZONS, rankEvidence } from './content/index.js';
 import { moonPhase, coincidencesFor, coincidencesAll, fmtDate, fmtTime, fmtDay, fmtShort, fmtOn } from './signals.js';
 import { h, svg, FORK_COLORS, humanize, remainingMs, evBadge, showEvidence, shortSource, downloadICS, prefersReduced, sleep } from './ui.js';
@@ -861,6 +862,6 @@ function init() {
     else { const ls = document.getElementById('langSel'); if (ls && active === 'langSel') ls.focus(); }
   });
   route();
-  if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('./sw.js').catch(() => {});
+  initPWA();
 }
 init();
