@@ -207,6 +207,7 @@ function expCard(e, x) {
   ${tx(x.measure) ? html`<p class="small"><b>${t('ex.measure')}:</b> ${tx(x.measure)}</p>` : ''}
   <p class="small muted">${x.due ? t('ex.due', { d: fmtDay(x.due) }) : ''}${x.due && m ? ' · ' : ''}${m ? t('ex.check', { m: tx(m.name) }) : (!x.due ? t('ex.unassigned') : '')}</p>
   ${done ? html`<p class="rates-line"><span class="small">${t('ex.rated.team')}</span> ${rateBadge(m.team.ratings[x.id] ? m.team.ratings[x.id].r : 'met')} <span class="small">${t('ex.rated.client')}</span> ${rateBadge(m.client.ratings[x.id] ? m.client.ratings[x.id].r : 'met')}</p>` : ''}
+  <p class="card-act"><a class="btn quiet" href="#/i/${e.id}/modifica/attesa/${x.id}" aria-label="${t('ed.edit.aria', { t: tx(x.text) })}">${icon('edit')}<span>${t('ed.edit')}</span></a></p>
 </li>`;
 }
 export function expectations(id) {
@@ -250,6 +251,7 @@ ${list.length ? html`<ul class="cards">${list.map(d => html`<li class="card dec"
   ${tx(d.why) ? html`<p><b>${t('dc.why')}:</b> ${tx(d.why)}</p>` : ''}
   ${tx(d.who) ? html`<p class="small"><b>${t('dc.who')}:</b> ${tx(d.who)}</p>` : ''}
   <div class="road"><p class="small kick">${t('dc.alt')}</p><p>${tx(d.alt) || t('dc.noalt')}</p></div>
+  <p class="card-act"><a class="btn quiet" href="#/i/${id}/modifica/decisione/${d.id}" aria-label="${t('ed.edit.aria', { t: tx(d.what) })}">${icon('edit')}<span>${t('ed.edit')}</span></a></p>
 </li>`)}</ul>` : html`<p class="muted">${t('dc.none')}</p>`}`,
   };
 }
@@ -290,7 +292,7 @@ ${crumb('/i/' + id, tx(e.title))}
 <h1>${t('hs.h1')}</h1><p class="lead">${t('hs.lead')}</p>
 <div class="actions"><button class="btn primary" id="exp" type="button">${icon('download')}<span>${t('hs.export')}</span></button></div>
 <div class="searchbox"><label for="hq" class="small muted">${t('hs.search')}</label><input id="hq" class="field" type="search" placeholder="${t('hs.search.ph')}" value="${hs.q}" autocomplete="off"></div>
-<div class="chips" role="group" aria-label="${t('hs.h1')}">${filters.map(f => html`<button class="chip" type="button" data-f="${f}" aria-pressed="${hs.f === f}">${t('hs.f.' + f)}</button>`)}</div>
+<div class="chips" role="group" aria-label="${t('hs.h1')}">${filters.map(f => html`<button class="chip" type="button" data-f="${f}" aria-pressed="${String(hs.f === f)}">${t('hs.f.' + f)}</button>`)}</div>
 <ol class="tl" id="tl"></ol>`,
     bind(root) {
       const paint = () => {
@@ -432,7 +434,7 @@ function checkinView({ exps, n, draftKey, ans, who, back, nextHref, onFinish, sa
 ${tx(x.measure) ? html`<p class="muted"><b>${t('ck.measure')}</b> ${tx(x.measure)}</p>` : ''}
 <h2 class="q">${t('ck.q')}</h2>
 <div class="rates" role="radiogroup" aria-label="${t('ck.q')}">
-  ${M.RATES.map(r => html`<button type="button" class="rbtn ${r}" role="radio" aria-checked="${cur.r === r}" data-r="${r}">${icon(r)}<span>${t('ck.' + r)}</span></button>`)}
+  ${M.RATES.map(r => html`<button type="button" class="rbtn ${r}" role="radio" aria-checked="${String(cur.r === r)}" data-r="${r}">${icon(r)}<span>${t('ck.' + r)}</span></button>`)}
 </div>
 <div id="nbox" ${cur.r ? '' : 'hidden'}><label for="note" class="small muted">${t('ck.note')}</label><textarea class="field" id="note" rows="3" placeholder="${t('ck.note.ph')}">${cur.note}</textarea></div>
 ${need('ckErr', t('need.pick'))}
@@ -571,6 +573,90 @@ export function newDecision(id, n, query) {
   return stepScreen({ key: 'dec:' + id, ns: 'dec', steps, n, base: `/i/${id}/decisione`, exit: fm ? `/i/${id}/m/${fm.id}` : `/i/${id}/scelte`, init,
     finish: d => { S.addDecision(e, { what: d.what, why: d.why, who: d.who, alt: d.alt, from: d.from }); return `/i/${id}/scelte`; } });
 }
+/* ───────── modifica ed eliminazione ───────── */
+const ed = { key: '', d: null };
+function editDraft(key, init) { if (env.lastView !== 'edit' || ed.key !== key) { ed.key = key; ed.d = { ...init }; } return ed.d; }
+const fld = (id, label, inner) => html`<div class="fgroup"><label class="flabel" for="${id}">${label}</label>${inner}</div>`;
+const chipRow = (list, attr) => (list.length ? html`<div class="chips">${list.map(c => html`<button class="chip" type="button" data-${attr}="${c.v}">${c.label}</button>`)}</div>` : '');
+export function editExpectation(id, xid) {
+  const e = S.engagement(id), x = e && S.expectationById(e, xid); if (!x) return notFound();
+  const d = editDraft('x:' + xid, { text: tx(x.text), by: tx(x.by), measure: tx(x.measure), due: x.due || '' });
+  const names = (x.owner === 'team' ? S.people().map(p => tx(p.name)) : (e.contacts || []).map(c => tx(c.name))).map(n => ({ label: n, v: n }));
+  const locked = S.expLocked(e, x), back = `/i/${id}/attese`;
+  return {
+    name: 'edit', ptr: false, tabs: null,
+    html: html`${crumb(back, t('back'))}
+<h1>${t('ed.exp.h')}</h1><p class="lead">${ownerChip(x.owner)} ${t('ed.exp.lead')}</p>
+${fld('f-text', t('ed.l.text'), html`<textarea class="field" id="f-text" rows="3">${d.text}</textarea>`)}
+${fld('f-by', t('ed.l.by'), html`${chipRow(names, 'by')}<input class="field" id="f-by" type="text" value="${d.by}" autocomplete="off">`)}
+${fld('f-measure', t('ed.l.measure'), html`<input class="field" id="f-measure" type="text" value="${d.measure}" autocomplete="off">`)}
+${fld('f-due', t('ed.l.due'), html`${chipRow(dueChips(), 'due')}<input class="field" id="f-due" type="date" value="${d.due}">`)}
+<p class="err" id="edErr" role="alert" hidden></p>
+<div class="actions col"><button class="btn primary big" id="edSave" type="button">${t('ed.save')}</button><a class="btn" id="edCancel" href="#${back}">${t('ed.cancel')}</a></div>
+<div class="dangerzone">${locked ? html`<p class="notice">${t('ed.del.locked')}</p>` : html`<a class="btn quiet danger" id="edDel" href="#/i/${id}/elimina/attesa/${xid}">${icon('missed')}<span>${t('ed.del')}</span></a>`}</div>`,
+    bind(root) {
+      [['#f-text', 'text'], ['#f-by', 'by'], ['#f-measure', 'measure'], ['#f-due', 'due']].forEach(([sel, k]) => $(root, sel).addEventListener('input', ev => { d[k] = ev.target.value; }));
+      root.querySelectorAll('[data-by]').forEach(b => b.addEventListener('click', () => { $(root, '#f-by').value = d.by = b.dataset.by; }));
+      root.querySelectorAll('[data-due]').forEach(b => b.addEventListener('click', () => { $(root, '#f-due').value = d.due = b.dataset.due; }));
+      $(root, '#edSave').addEventListener('click', () => {
+        const err = m => { const n = $(root, '#edErr'); n.textContent = m; n.hidden = false; };
+        if (!String(d.text).trim()) { err(t('ed.need.text')); $(root, '#f-text').focus(); return; }
+        if (!String(d.measure).trim()) { err(t('ed.need.measure')); $(root, '#f-measure').focus(); return; }
+        const changed = S.updateExpectation(e, xid, d); ed.key = '';
+        env.flash = changed ? t('ed.saved') : t('ed.nochange'); go(back);
+      });
+    },
+  };
+}
+export function editDecision(id, did) {
+  const e = S.engagement(id), x = e && S.decisionById(e, did); if (!x) return notFound();
+  const d = editDraft('d:' + did, { what: tx(x.what), why: tx(x.why), who: tx(x.who), alt: tx(x.alt) });
+  const back = `/i/${id}/scelte`;
+  const whoChips = [t('dec.who.both'), t('dec.who.team'), t('dec.who.client')].map(v => ({ label: v, v }));
+  return {
+    name: 'edit', ptr: false, tabs: null,
+    html: html`${crumb(back, t('back'))}
+<h1>${t('ed.dec.h')}</h1><p class="lead">${t('ed.dec.lead')}</p>
+${fld('f-what', t('ed.l.what'), html`<input class="field" id="f-what" type="text" value="${d.what}" autocomplete="off">`)}
+${fld('f-why', t('ed.l.why'), html`<textarea class="field" id="f-why" rows="3">${d.why}</textarea>`)}
+${fld('f-who', t('ed.l.who'), html`${chipRow(whoChips, 'who')}<input class="field" id="f-who" type="text" value="${d.who}" autocomplete="off">`)}
+${fld('f-alt', t('ed.l.alt'), html`<textarea class="field" id="f-alt" rows="3">${d.alt}</textarea>`)}
+<p class="err" id="edErr" role="alert" hidden></p>
+<div class="actions col"><button class="btn primary big" id="edSave" type="button">${t('ed.save')}</button><a class="btn" id="edCancel" href="#${back}">${t('ed.cancel')}</a></div>
+<div class="dangerzone"><a class="btn quiet danger" id="edDel" href="#/i/${id}/elimina/decisione/${did}">${icon('missed')}<span>${t('ed.del')}</span></a></div>`,
+    bind(root) {
+      [['#f-what', 'what'], ['#f-why', 'why'], ['#f-who', 'who'], ['#f-alt', 'alt']].forEach(([sel, k]) => $(root, sel).addEventListener('input', ev => { d[k] = ev.target.value; }));
+      root.querySelectorAll('[data-who]').forEach(b => b.addEventListener('click', () => { $(root, '#f-who').value = d.who = b.dataset.who; }));
+      $(root, '#edSave').addEventListener('click', () => {
+        if (!String(d.what).trim()) { const n = $(root, '#edErr'); n.textContent = t('ed.need.what'); n.hidden = false; $(root, '#f-what').focus(); return; }
+        const changed = S.updateDecision(e, did, d); ed.key = '';
+        env.flash = changed ? t('ed.saved') : t('ed.nochange'); go(back);
+      });
+    },
+  };
+}
+export function confirmDelete(kind, id, oid) {
+  const e = S.engagement(id), isExp = kind === 'attesa';
+  const x = e && (isExp ? S.expectationById(e, oid) : S.decisionById(e, oid)); if (!x) return notFound();
+  if (isExp && S.expLocked(e, x)) return { redirect: `/i/${id}/modifica/attesa/${oid}` };
+  const back = isExp ? `/i/${id}/attese` : `/i/${id}/scelte`, editBack = `/i/${id}/modifica/${kind}/${oid}`;
+  return {
+    name: 'confirm', ptr: false, tabs: null,
+    html: html`${crumb(editBack, t('back'))}
+<h1>${t(isExp ? 'ed.del.exp.h' : 'ed.del.dec.h')}</h1>
+<blockquote class="card quote ${isExp ? x.owner : 'dec'}"><p>${tx(isExp ? x.text : x.what)}</p></blockquote>
+<p class="lead">${t('ed.del.d')}</p>
+<div class="actions col"><a class="btn primary big" id="delNo" href="#${back}">${t('ed.del.no')}</a><button class="btn big danger" id="delYes" type="button">${t('ed.del.yes')}</button></div>`,
+    bind(root) {
+      $(root, '#delYes').addEventListener('click', () => {
+        const rec = isExp ? S.deleteExpectation(e, oid) : S.deleteDecision(e, oid);
+        if (!rec) { go(editBack); return; }
+        env.undo = { msg: t(isExp ? 'ed.deleted.exp' : 'ed.deleted.dec'), label: t('ed.undo'), done: t('ed.undone'), fn: () => { S.restoreDeleted(e, rec); env.rerender(); } };
+        go(back);
+      });
+    },
+  };
+}
 export function newMilestone(id, n) {
   const e = S.engagement(id); if (!e) return notFound();
   const steps = () => [{ k: 'name' }, { k: 'date', type: 'date', chips: dueChips(), badMsg: t('need.pick') }];
@@ -584,9 +670,12 @@ export function newPerson(n) {
 }
 
 /* ───────── prezzi e prova ───────── */
-let billing = 'monthly';
+let billing = 'monthly', trialBill = 'monthly';
+/** La fatturazione parte sempre da «Mensile»; «Annuale» è una scelta da fare ogni volta. */
+export const resetBilling = () => { billing = 'monthly'; };
 export function pricing() {
   const an = billing === 'annual';
+  trialBill = billing;
   const card = id => {
     const p = PLANS[id];
     const feats = [1, 2, 3, 4].map(n => t(`pr.${id}.f${n}`));
@@ -604,8 +693,8 @@ export function pricing() {
     name: 'pricing', ptr: true,
     html: html`<h1>${t('pr.h1')}</h1><p class="lead">${t('pr.lead')}</p>
 <div class="toggle" role="radiogroup" aria-label="${t('pr.toggle.aria')}">
-  <button type="button" role="radio" id="bm" aria-checked="${!an}">${t('pr.monthly')}</button>
-  <button type="button" role="radio" id="ba" aria-checked="${an}">${t('pr.annual')} <span class="badge">${t('pr.annual.badge')}</span></button>
+  <button type="button" role="radio" id="bm" aria-checked="${String(!an)}">${t('pr.monthly')}</button>
+  <button type="button" role="radio" id="ba" aria-checked="${String(an)}">${t('pr.annual')} <span class="badge">${t('pr.annual.badge')}</span></button>
 </div>
 <div class="plans">${ORDER.map(card)}
   <article class="plan" aria-labelledby="pl-ent"><h2 id="pl-ent">${t('pr.enterprise')}</h2><p class="muted small">${t('pr.enterprise.d')}</p>
@@ -624,17 +713,44 @@ export function pricing() {
 export function trialStart(plan, n) {
   if (!PLANS[plan]) return notFound();
   const v = x => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(x);
-  const r = stepScreen({ key: 'tr:' + plan, ns: 'tr', steps: () => [{ k: 'email', pre: 'tr', input: 'email', valid: v, badMsg: t('tr.bad'), cta: t('tr.cta') }], n, base: `/prova/${plan}`, exit: '/prezzi', init: {},
-    finish: d => { S.startTrial(plan, d.email); return `/prova/${plan}/fatto`; } });
+  const roles = [1, 2, 3, 4].map(i => { const l = t('tr.role.r' + i); return { label: l, v: l }; });
+  const teamChips = S.workspaceName() ? [{ label: S.workspaceName(), v: S.workspaceName() }] : [];
+  const steps = () => [
+    { k: 'team', pre: 'tr.team', chips: teamChips },
+    { k: 'size', pre: 'tr.size', type: 'choice', opts: [1, 2, 3, 4, 0].map(i => ({ v: String(i), label: t('tr.size.s' + i) })) },
+    { k: 'role', pre: 'tr.role', chips: roles },
+    { k: 'email', pre: 'tr', input: 'email', valid: v, badMsg: t('tr.bad'), cta: t('tr.cta') },
+  ];
+  const r = stepScreen({ key: 'tr:' + plan, ns: 'tr', steps, n, base: `/prova/${plan}`, exit: '/prezzi', init: { team: S.workspaceName() },
+    finish: d => { S.startTrial(plan, d.email, { team: d.team, size: t('tr.size.s' + d.size), role: d.role, billing: trialBill }); return `/prova/${plan}/fatto`; } });
   if (r.html) r.html = html`<p class="small kick">${t('tr.h1', { plan: planName(plan) })}</p>${r.html}`;
   return r;
 }
+/** Testo della richiesta di prova, pronto per mailto: (nessun servizio esterno). */
+function trialMail(plan, tr) {
+  const one = x => String(x || '').replace(/[\r\n]+/g, ' ').trim();
+  const v = { plan: planName(plan), team: one(tr.team) || '—', size: one(tr.size) || '—', role: one(tr.role) || '—', email: one(tr.email), billing: t('tr.bill.' + (tr.billing === 'annual' ? 'annual' : 'monthly')) };
+  const subject = t('tr.req.subject', v), body = t('tr.req.body', v);
+  return { subject, body, href: `mailto:${CONTACT}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}` };
+}
 export function trialDone(plan) {
   const tr = S.trial(); if (!tr || tr.plan !== plan) return { redirect: '/prezzi' };
-  const sub = t('tr.write.subject', { plan: planName(plan) }), body = t('tr.write.body', { plan: planName(plan), email: tr.email });
-  return { name: 'trialdone', ptr: true, html: html`<h1>${t('tr.done.h', { plan: planName(plan) })}</h1><p class="lead">${t('tr.done.d', { date: fmtTs(tr.endsAt) })}</p>
-<div class="actions"><a class="btn primary" id="trOpen" href="#/demo">${t('tr.open')}${icon('arrow')}</a></div>
-<p><a class="btn quiet" href="mailto:${CONTACT}?subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}">${t('tr.write')}</a></p>` };
+  const m = trialMail(plan, tr);
+  return { name: 'trialdone', ptr: true, html: html`<h1>${t('tr.done.h2')}</h1>
+<ol class="steps done">
+  <li><span class="num ok" aria-hidden="true">${icon('met')}</span><div><p>${t('tr.done.s1', { plan: planName(plan), date: fmtTs(tr.endsAt) })}</p></div></li>
+  <li><span class="num" aria-hidden="true">2</span><div><p><b>${t('tr.done.s2')}</b></p></div></li>
+</ol>
+<div class="actions col"><a class="btn primary big" id="trSend" href="${m.href}">${icon('share')}<span>${t('tr.send')}</span></a></div>
+<p class="notice" id="trNote">${t('tr.sent.note')}</p>
+<section class="card"><h2 class="h2s">${t('tr.prev')}</h2>
+  <p class="small muted">${t('tr.prev.to')}: ${CONTACT}</p><p class="small muted">${t('tr.prev.subj')}:</p><p><b>${m.subject}</b></p>
+  <pre class="mailbody" tabindex="0">${m.body}</pre></section>
+<section class="card"><h3>${t('tr.nomail.h')}</h3><p class="muted">${t('tr.nomail.d')}</p><button class="btn quiet" id="trCopy" type="button">${t('tr.copy')}</button></section>
+<div class="actions col"><a class="btn" id="trOpen" href="#/demo">${t('tr.demo')}${icon('arrow')}</a></div>`,
+    bind(root) {
+      $(root, '#trCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(CONTACT + '\n' + m.subject + '\n\n' + m.body); toast(t('tr.copied')); } catch { /* ignore */ } });
+    } };
 }
 
 /* ───────── impostazioni, email, nota ───────── */
@@ -654,7 +770,7 @@ export function settings() {
 <section class="card"><button class="btn quiet" id="reDemo" type="button">${t('st.demo')}</button><p class="small muted">${t('st.demo.d')}</p>
   <button class="btn quiet" id="dl" type="button">${icon('download')}<span>${t('st.export')}</span></button><p class="small muted">${t('st.export.d')}</p>
   <button class="btn quiet danger" id="wipe" type="button">${wipeArm ? t('st.wipe.sure') : t('st.wipe')}</button><p class="small muted">${t('st.wipe.d')}</p></section>
-<p class="small muted center">${t('st.ver', { v: '1.0.0' })}</p>`,
+<p class="small muted center">${t('st.ver', { v: '1.1.0' })}</p>`,
     bind(root) {
       $(root, '#wsSave').addEventListener('click', () => { S.setWorkspaceName($(root, '#ws').value); toast(t('st.saved')); });
       root.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', () => { S.removePerson(b.dataset.rm); env.rerender(); }));
@@ -671,7 +787,7 @@ export function emails() {
   return {
     name: 'emails', ptr: true,
     html: html`${crumb('/impostazioni', t('st.h1'))}<h1>${t('em.h1')}</h1><p class="lead">${t('em.lead')}</p>
-<div class="toggle" role="radiogroup" aria-label="${t('em.lang')}"><button type="button" role="radio" data-l="it" aria-checked="${emLang === 'it'}">Italiano</button><button type="button" role="radio" data-l="en" aria-checked="${emLang === 'en'}">English</button></div>
+<div class="toggle" role="radiogroup" aria-label="${t('em.lang')}"><button type="button" role="radio" data-l="it" aria-checked="${String(emLang === 'it')}">Italiano</button><button type="button" role="radio" data-l="en" aria-checked="${String(emLang === 'en')}">English</button></div>
 <ul class="cards">${EMAIL_IDS.map(id => { const m = mail(id, emLang, v); return html`<li class="card"><h2 class="h2s">${t('em.t.' + id)}</h2><p class="small muted">${t('em.subject')}</p><p><b>${m.subject}</b></p><pre class="mailbody" tabindex="0">${m.body}</pre><button class="btn quiet" type="button" data-cp="${id}">${t('em.copy')}</button></li>`; })}</ul>`,
     bind(root) {
       root.querySelectorAll('[data-l]').forEach(b => b.addEventListener('click', () => { emLang = b.dataset.l; env.rerender(); }));

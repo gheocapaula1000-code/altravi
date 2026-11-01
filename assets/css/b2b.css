@@ -279,3 +279,23 @@ body.has-tabs .site-footer{margin-bottom:0}
 html[lang=it] body.lp [data-l=en],html:not([lang=it]) body.lp [data-l=it]{display:none!important}
 .nb{white-space:nowrap}
 .legal-top .btn{min-height:3rem;padding:.4rem 1.1rem}
+
+/* v1.1: modifica, eliminazione, annulla, conferma prova */
+.card-act{margin:.7rem 0 0}
+.card-act .btn{min-height:3rem;padding:.4rem 1.1rem}
+.fgroup{margin:1.1rem 0}
+.flabel{display:block;font-weight:700;font-size:1.05rem;margin-bottom:.2rem}
+.dangerzone{margin:2rem 0 1rem;padding-top:1.2rem;border-top:.0625rem solid var(--line)}
+.dangerzone .btn{width:100%}
+.btn.danger{border-color:rgba(255,128,145,.55)}
+.btn.big.danger{background:rgba(255,128,145,.14)}
+.quote{margin:1rem 0;font-size:1.2rem;line-height:1.4;border-inline-start:.28rem solid var(--c,var(--line))}
+.quote.team{--c:var(--team)} .quote.client{--c:var(--client)} .quote.dec{--c:var(--violet)}
+.quote p{margin:0}
+.undobar{position:fixed;left:0;right:0;margin-inline:auto;bottom:calc(5.2rem + env(safe-area-inset-bottom));z-index:70;width:min(94vw,30rem);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.6rem 1rem;padding:.8rem .9rem .8rem 1.2rem;border-radius:var(--r);background:rgba(13,19,38,.98);border:.0625rem solid var(--line);box-shadow:0 .8rem 2.4rem rgba(0,0,0,.6);font-weight:700;animation:fadeUp .4s var(--ease) both}
+.undobar .btn{min-height:3.5rem;min-width:7rem}
+.steps.done{margin:1rem 0}
+.num.ok{background:var(--met);color:#06210f}
+.num.ok .ic{width:1.5rem;height:1.5rem}
+body:has(#undo) .toast{bottom:calc(10.2rem + env(safe-area-inset-bottom))}
+.actions.col>.btn,.actions.col .btn.primary{flex:0 0 auto}

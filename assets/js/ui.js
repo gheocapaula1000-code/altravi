@@ -34,6 +34,7 @@ const I = {
   arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   back: '<path d="M19 12H5M11 6l-6 6 6 6"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
   down: '<path d="M12 5v14M6 13l6 6 6-6"/>',
   share: '<path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v7h14v-7"/>',
   download: '<path d="M12 4v11M8 11l4 4 4-4"/><path d="M5 19h14"/>',
@@ -57,5 +58,17 @@ export function toast(msg) {
   if (!n) { n = document.createElement('div'); n.id = 'toast'; n.className = 'toast'; n.setAttribute('role', 'status'); n.setAttribute('aria-live', 'polite'); document.body.append(n); }
   n.textContent = msg; n.classList.add('on');
   clearTimeout(toastT); toastT = setTimeout(() => n.classList.remove('on'), 2600);
+}
+let undoT = 0;
+export function hideUndo() { clearTimeout(undoT); const n = document.getElementById('undo'); if (n) n.remove(); }
+/** Barra «Annulla» dopo un'eliminazione: resta 20 secondi. */
+export function undoBar({ msg, label, done, fn }) {
+  hideUndo();
+  const n = document.createElement('div'); n.id = 'undo'; n.className = 'undobar'; n.setAttribute('role', 'status');
+  const p = document.createElement('span'); p.textContent = msg;
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'btn primary'; b.id = 'undoBtn'; b.textContent = label;
+  b.addEventListener('click', () => { hideUndo(); fn(); toast(done); });
+  n.append(p, b); document.body.append(n);
+  undoT = setTimeout(hideUndo, 20000);
 }
 export { t, tx };

@@ -4,7 +4,7 @@ import * as S from './store.js';
 import * as V from './views.js';
 import { decode } from './share.js';
 import { initPWA, setSoftRefresh } from './pwa.js';
-import { icon, toast, html } from './ui.js';
+import { icon, toast, html, undoBar, hideUndo } from './ui.js';
 
 const main = document.getElementById('view');
 const tabsEl = document.getElementById('tabs');
@@ -41,6 +41,9 @@ async function resolve({ path, query }) {
   if ((m = path.match(/^\/i\/([\w-]+)\/attesa\/(\d+)(?:\/(team|client))?$/))) return V.newExpectation(m[1], N(m[2]), m[3]);
   if ((m = path.match(/^\/i\/([\w-]+)\/decisione\/(\d+)$/))) return V.newDecision(m[1], N(m[2]), query);
   if ((m = path.match(/^\/i\/([\w-]+)\/tappa\/(\d+)$/))) return V.newMilestone(m[1], N(m[2]));
+  if ((m = path.match(/^\/i\/([\w-]+)\/modifica\/attesa\/([\w-]+)$/))) return V.editExpectation(m[1], m[2]);
+  if ((m = path.match(/^\/i\/([\w-]+)\/modifica\/decisione\/([\w-]+)$/))) return V.editDecision(m[1], m[2]);
+  if ((m = path.match(/^\/i\/([\w-]+)\/elimina\/(attesa|decisione)\/([\w-]+)$/))) return V.confirmDelete(m[2], m[1], m[3]);
   if ((m = path.match(/^\/i\/([\w-]+)\/m\/([\w-]+)$/))) return V.milestone(m[1], m[2]);
   if ((m = path.match(/^\/i\/([\w-]+)\/m\/([\w-]+)\/v\/(\d+)$/))) return V.teamCheckin(m[1], m[2], N(m[3]));
   // vista cliente
@@ -101,6 +104,8 @@ async function render(soft = false) {
   if (v.bind) v.bind(main);
   V.env.lastView = v.name; lastName = v.name;
   document.body.dataset.rendered = String(my);
+  if (!soft) hideUndo();
+  if (V.env.undo) { undoBar(V.env.undo); V.env.undo = null; }
   if (V.env.flash) { toast(V.env.flash); V.env.flash = ''; }
   if (!soft) { window.scrollTo(0, 0); const h = main.querySelector('h1'); if (h && !firstRender) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); } }
   firstRender = false;
@@ -132,7 +137,7 @@ function boot() {
     paintChrome();
   });
   onLang(() => render(true));
-  window.addEventListener('hashchange', () => render());
+  window.addEventListener('hashchange', () => { if (!/^#\/prezzi/.test(location.hash)) V.resetBilling(); render(); });
   window.addEventListener('storage', e => { if (e.key === 'altravi.team.v1') { S.reload(); render(true); } });
   setSoftRefresh(async () => { S.reload(); await render(true); });
   initPWA();

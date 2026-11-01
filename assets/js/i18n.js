@@ -366,7 +366,8 @@ const EN = {
 };
 
 import { IT2, EN2 } from './i18n2.js';
-Object.assign(IT, IT2); Object.assign(EN, EN2);
+import { IT3, EN3 } from './i18n3.js';
+Object.assign(IT, IT2, IT3); Object.assign(EN, EN2, EN3);
 const DICT = { it: IT, en: EN };
 const KEY = 'altravi.team.lang';
 const ROOT_KEY = 'altravi.lang';

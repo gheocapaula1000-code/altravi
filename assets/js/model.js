@@ -81,6 +81,10 @@ export function events(e) {
     if (tx(d.alt)) extra.push(t('dc.alt') + ': ' + tx(d.alt));
     out.push({ at: d.createdAt, kind: 'dec', title: t('hs.ev.dec'), body: tx(d.what), extra, cat: 'dec' });
   }
+  for (const l of e.log || []) {
+    const extra = (l.ch || []).map(c => t('ed.f.' + c.k) + ': ' + t('ed.was', { a: c.from || t('ed.empty'), b: c.to || t('ed.empty') }));
+    out.push({ at: l.at, kind: 'edit', title: t('hs.ev.' + l.kind), body: tx(l.text), extra, cat: l.kind.startsWith('exp') ? 'exp' : 'dec' });
+  }
   for (const m of e.milestones) {
     const nm = tx(m.name);
     const notes = side => Object.entries(side.ratings).map(([id, v]) => { const x = e.expectations.find(q => q.id === id); return x ? tx(x.text) + ' — ' + t('rate.' + v.r) + (v.note ? ': ' + tx(v.note) : '') : ''; }).filter(Boolean);

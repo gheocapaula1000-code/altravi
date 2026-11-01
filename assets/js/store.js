@@ -5,6 +5,7 @@
 //   milestones:[{id,name,date,expIds,token,team:{ratings,at}|null,client:{ratings,at,by}|null}] }] }
 import { demoEngagement, demoPeople } from './demo.js';
 import { PLANS, TRIAL_DAYS } from './plans.js';
+import { tx } from './i18n.js';
 
 const KEY = 'altravi.team.v1';
 const CV_KEY = 'altravi.team.cv';
@@ -70,8 +71,10 @@ export function trialDaysLeft() {
 export const trialActive = () => { const n = trialDaysLeft(); return n != null && n > 0; };
 /** Piano in uso: quello della prova finché dura, altrimenti Start (la demo gira con i limiti di Start). */
 export const currentPlan = () => (trialActive() ? S.workspace.trial.plan : 'start');
-export function startTrial(plan, email) {
-  S.workspace.trial = { plan, email: String(email).trim(), startedAt: Date.now(), endsAt: Date.now() + TRIAL_DAYS * 86400000 };
+export function startTrial(plan, email, extra = {}) {
+  const c = v => String(v || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 120);
+  S.workspace.trial = { plan, email: String(email).trim(), team: c(extra.team), size: c(extra.size), role: c(extra.role), billing: extra.billing === 'annual' ? 'annual' : 'monthly', startedAt: Date.now(), endsAt: Date.now() + TRIAL_DAYS * 86400000 };
+  if (!S.workspace.name && S.workspace.trial.team) S.workspace.name = S.workspace.trial.team.slice(0, 80);
   save();
 }
 export const activeEngagements = () => S.engagements.filter(e => !e.closedAt);
@@ -82,6 +85,53 @@ export function addPerson({ name, role }) { S.workspace.people.push({ id: uid(),
 export function removePerson(id) { S.workspace.people = S.workspace.people.filter(p => p.id !== id); save(); }
 export function closeEngagement(e) { e.closedAt = Date.now(); save(); }
 export function addReview(e, by, note) { e.reviews = e.reviews || []; e.reviews.push({ at: Date.now(), by: by || '', note: note || '' }); save(); }
+
+/* ───────── modifica ed eliminazione (con registro per lo storico) ───────── */
+const logOf = e => (e.log = e.log || []);
+function applyChanges(e, kind, obj, fields, next, extraLog) {
+  const ch = [];
+  for (const k of fields) {
+    const from = tx(obj[k]), to = String(next[k] == null ? '' : next[k]).trim();
+    if (from !== to) { ch.push({ k, from, to }); obj[k] = to; }
+  }
+  if (!ch.length) return false;
+  logOf(e).push({ at: Date.now(), kind, id: obj.id, owner: obj.owner || '', text: tx(obj.text || obj.what), ch, ...extraLog });
+  save(); return true;
+}
+export const expectationById = (e, id) => e.expectations.find(q => q.id === id);
+export const decisionById = (e, id) => e.decisions.find(q => q.id === id);
+/** True se la tappa dell'aspettativa è già chiusa da entrambi: allora non si elimina (lo storico resta vero). */
+export const expLocked = (e, x) => { const m = x.mid && milestone(e, x.mid); return !!(m && m.team && m.client); };
+export function updateExpectation(e, id, next) { const x = expectationById(e, id); return x ? applyChanges(e, 'exp-edit', x, ['text', 'by', 'measure', 'due'], next) : false; }
+export function updateDecision(e, id, next) { const d = decisionById(e, id); return d ? applyChanges(e, 'dec-edit', d, ['what', 'why', 'who', 'alt'], next) : false; }
+/** Elimina; restituisce il necessario per annullare (o null). */
+export function deleteExpectation(e, id) {
+  const idx = e.expectations.findIndex(q => q.id === id); if (idx < 0) return null;
+  const x = e.expectations[idx]; if (expLocked(e, x)) return null;
+  const m = x.mid ? milestone(e, x.mid) : null; const rec = { kind: 'exp', idx, x, mid: m ? m.id : '', pos: m ? m.expIds.indexOf(id) : -1, rt: null, rc: null };
+  if (m) {
+    m.expIds = m.expIds.filter(q => q !== id);
+    if (m.team && m.team.ratings[id]) { rec.rt = m.team.ratings[id]; delete m.team.ratings[id]; }
+    if (m.client && m.client.ratings[id]) { rec.rc = m.client.ratings[id]; delete m.client.ratings[id]; }
+  }
+  e.expectations.splice(idx, 1);
+  rec.log = { at: Date.now(), kind: 'exp-del', id, owner: x.owner, text: tx(x.text), ch: [] }; logOf(e).push(rec.log);
+  save(); return rec;
+}
+export function deleteDecision(e, id) {
+  const idx = e.decisions.findIndex(q => q.id === id); if (idx < 0) return null;
+  const d = e.decisions[idx]; e.decisions.splice(idx, 1);
+  const rec = { kind: 'dec', idx, d, log: { at: Date.now(), kind: 'dec-del', id, owner: '', text: tx(d.what), ch: [] } }; logOf(e).push(rec.log);
+  save(); return rec;
+}
+export function restoreDeleted(e, rec) {
+  if (rec.kind === 'exp') {
+    e.expectations.splice(Math.min(rec.idx, e.expectations.length), 0, rec.x);
+    const m = rec.mid ? milestone(e, rec.mid) : null;
+    if (m) { m.expIds.splice(rec.pos >= 0 ? rec.pos : m.expIds.length, 0, rec.x.id); if (rec.rt && m.team) m.team.ratings[rec.x.id] = rec.rt; if (rec.rc && m.client) m.client.ratings[rec.x.id] = rec.rc; }
+  } else e.decisions.splice(Math.min(rec.idx, e.decisions.length), 0, rec.d);
+  e.log = logOf(e).filter(l => l !== rec.log); save();
+}
 
 export function seedDemo(force = false) {
   const i = S.engagements.findIndex(e => e.id === 'demo');

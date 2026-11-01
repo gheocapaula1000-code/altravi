@@ -1,10 +1,10 @@
 // Service worker di Altravì (B2B), scope /. Stesso percorso del vecchio sw.js: le installazioni esistenti ricevono l'aggiornamento.
 // Il nuovo worker aspetta il tocco su «Aggiorna» (SKIP_WAITING). All'attivazione cancella TUTTE le vecchie cache (anche altravi-v4.*).
-const VERSION = 'altravi-b2b-v1.0.0';
+const VERSION = 'altravi-b2b-v1.1.0';
 const SHELL = [
   './', 'index.html', '404.html', 'privacy.html', 'termini.html', 'cookie.html', 'manifest.webmanifest',
   'assets/css/b2b.css', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
-  'assets/js/app.js', 'assets/js/i18n.js', 'assets/js/i18n2.js', 'assets/js/store.js', 'assets/js/model.js', 'assets/js/demo.js', 'assets/js/share.js',
+  'assets/js/app.js', 'assets/js/i18n.js', 'assets/js/i18n2.js', 'assets/js/i18n3.js', 'assets/js/store.js', 'assets/js/model.js', 'assets/js/demo.js', 'assets/js/share.js',
   'assets/js/ui.js', 'assets/js/views.js', 'assets/js/pwa.js', 'assets/js/plans.js', 'assets/js/emails.js', 'assets/js/lang-boot.js', 'assets/js/legal.js',
 ];
 self.addEventListener('install', e => {
