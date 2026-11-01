@@ -51,6 +51,7 @@ export const store = {
     write();
     return line;
   },
+  setCheckin(lineId, val) { const l = this.getLine(lineId); if (!l) return; l.checkin = val; l.signs.checkin = true; write(); },
   getLine(id) { return read().lines.find(l => l.id === id) || null; },
   toggleSign(lineId, key) {
     const l = this.getLine(lineId); if (!l) return;

@@ -1,4 +1,4 @@
-/* Altravì — design: notte, luce, porte che scorrono. Nessuna misura fissa in px (solo hairline). */
+/* Altravì — design: notte, luce, linee che si dividono. Nessuna misura fissa in px (solo hairline). */
 :root{
   --bg:#05060f; --bg2:#0b0f2a; --ink:#f6f2ea; --muted:#bcc2dc; --faint:#8a92b8;
   --amber:#ffb84d; --teal:#4fd1c5; --violet:#b794f6; --rose:#f687b3;
@@ -322,3 +322,88 @@ select.lang-btn option{background:#0d1236;color:#f6f2ea}
 /* RTL: pronto per ar/he/fa/ur (dir=rtl impostato da i18n/lang-boot) */
 [dir=rtl] .hnote{border-radius:.8rem 0 0 .8rem}
 @media print{[dir=rtl] .book{direction:rtl}}
+
+/* ── consiglio, scelte di ogni giorno ── */
+.hero h1{font-size:clamp(1.7rem,6vw,2.6rem);line-height:1.15}
+.hero .lead{font-size:clamp(1.1rem,3.6vw,1.3rem)}
+.hero .field{min-height:5.2rem}
+details.more{margin:1.2rem 0 0}
+details.more summary{cursor:pointer;min-height:2.75rem;display:flex;align-items:center;color:var(--muted);font-weight:700}
+details.more .chips{margin-top:.4rem}
+.rec{margin-inline-start:auto;align-self:flex-start;padding:.2rem .7rem;border-radius:999rem;background:linear-gradient(120deg,#ffcf70,#ff9c6b);color:#1a1020;font-weight:800;font-size:.85rem;white-space:nowrap}
+.door-top{align-items:flex-start}
+.advice{margin:1.4rem 0 1rem;padding:1.3rem 1.3rem 1.1rem;border-radius:var(--r);background:linear-gradient(160deg,rgba(255,207,112,.16),rgba(246,135,179,.1));border:.0625rem solid rgba(255,207,112,.45);box-shadow:0 1.4rem 3.6rem -1.6rem rgba(255,160,100,.55);animation:advIn .9s 1.6s var(--ease) both}
+.reduce .advice,.advice.swap{animation:none}
+.advice.swap{animation:advSwap .35s var(--ease)}
+@keyframes advIn{from{opacity:0;transform:translateY(.8rem)}to{opacity:1;transform:none}}
+@keyframes advSwap{from{opacity:.2}to{opacity:1}}
+.advice-h{font-family:var(--serif);font-weight:500;font-size:clamp(1.35rem,4.8vw,2rem);line-height:1.25;margin:0 0 .9rem}
+.advice-lbl{color:#ffcf70;font-weight:700}
+.advice-cols{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr))}
+.advice h3{font-size:.85rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:.2rem 0 .4rem}
+.advice ul{margin:0;padding-inline-start:1.1rem}
+.advice li{margin:.2rem 0}
+.advice-step{margin:0;font-weight:600}
+.checkin{margin:1rem 0;text-align:center}
+.checkin h2{margin-top:0}
+.checkin .row{justify-content:center}
+.checkin-r{min-height:1.5rem;margin:.8rem auto 0;max-width:34rem}
+@media (prefers-reduced-motion: reduce){.advice{animation:none}}
+.hero .lightline{height:2.6rem;margin-bottom:.8rem}
+.hero .chip{min-height:2.75rem;padding:.4rem .95rem;font-size:.98rem}
+.hero .chips{margin:.5rem 0 .6rem;gap:.5rem}
+.hero{justify-content:flex-start;padding-top:.6rem}
+
+/* ───── v4: ai margini della realtà — linee che si dividono, niente porte ───── */
+.hero-split{display:block;width:min(15rem,70%);height:auto;margin:0 auto .3rem;overflow:visible}
+.hero-split path{fill:none;stroke-width:1.6;stroke-linecap:round;filter:drop-shadow(0 0 3px currentColor);transition:d .5s var(--ease);stroke-dasharray:140;stroke-dashoffset:140;animation:draw 1.6s var(--ease) .1s forwards}
+.hero-split circle{filter:drop-shadow(0 0 5px currentColor);animation:pulse 2.8s ease-in-out infinite;transition:cx .5s var(--ease)}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+.hero .kicker{text-align:center;letter-spacing:.22em;text-transform:uppercase;font-size:.85rem;color:var(--amber);margin:.2rem 0 .4rem}
+.hero h1{text-align:center;font-size:clamp(2rem,8vw,3.1rem);line-height:1.08;margin:0 0 .5rem;text-shadow:0 0 2rem rgba(255,184,77,.25)}
+.hero .lead{text-align:center;max-width:30rem;margin:0 auto 1rem;font-size:clamp(1.05rem,3.6vw,1.2rem)}
+.hero .field{max-width:34rem;margin-inline:auto;display:block;border-color:rgba(255,184,77,.55);box-shadow:0 0 2.2rem -.6rem rgba(255,184,77,.55)}
+.hero .row{justify-content:center}
+.btn.big{min-height:3.6rem;padding:.8rem 2rem;font-size:1.25rem;font-weight:800;box-shadow:0 0 2.4rem -.3rem rgba(255,184,77,.6)}
+.promise{text-align:center;color:var(--muted);font-size:.98rem;margin:.7rem 0 0;letter-spacing:.01em}
+.hero .muted.small{text-align:center}
+.hero .chips{justify-content:center}
+.hero details.more{text-align:center}
+.hero details.more .chips{justify-content:center}
+
+/* il risultato: due linee luminose che si separano, due futuri affiancati */
+.diverge{position:relative;margin:.3rem auto 0;max-width:46rem}
+.diverge-when{margin:0 0 .2rem;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;font-size:.82rem;font-weight:700}
+.diverge .origin{position:absolute;left:50%;top:1.7rem;width:.7rem;height:.7rem;margin-left:-.35rem;border-radius:50%;background:#fff;box-shadow:0 0 1.2rem .3rem rgba(255,255,255,.7);z-index:1}
+.diverge .fork-lines{width:100%;height:clamp(4.5rem,13dvh,7.5rem);aspect-ratio:auto;max-height:none}
+.diverge .fork-lines path{vector-effect:non-scaling-stroke;stroke-width:3}
+.diverge .fork-lines .glow{stroke-width:11;opacity:.22}
+.marks{display:grid;grid-template-columns:repeat(var(--n,2),1fr);gap:.5rem;margin-top:-.2rem}
+.mk{text-align:center;padding:.3rem .2rem}
+.mk-orb{display:block;width:1.1rem;height:1.1rem;margin:0 auto .3rem;border-radius:50%;background:var(--c);box-shadow:0 0 1.4rem .3rem var(--c);animation:pulse 3s ease-in-out infinite}
+.mk-feel{display:block;font-family:var(--serif);font-weight:600;font-size:clamp(1.5rem,6.4vw,2.3rem);line-height:1.1;color:var(--c);text-shadow:0 0 1.4rem color-mix(in srgb,var(--c) 55%,transparent);overflow-wrap:anywhere}
+.mk-name{display:block;margin-top:.15rem;font-size:.95rem;font-weight:700;color:var(--ink)}
+.mk-txt{margin:.3rem auto 0;color:var(--muted);font-size:.95rem;line-height:1.4;max-width:15rem}
+.spark{max-width:34rem;margin:.2rem auto 1rem;text-align:center;font-family:var(--serif);font-style:italic;font-size:1.12rem;color:#ffe2a8}
+/* l'apertura: la luce si spalanca, le tue parole si separano (nessuna porta) */
+.reveal .panel{background:radial-gradient(60% 80% at var(--px,50%) 50%,rgba(5,6,15,.96),rgba(5,6,15,.9));box-shadow:none;transition:transform 1s var(--ease),opacity .9s,filter .9s}
+.reveal .l{--px:100%;box-shadow:none}.reveal .r{--px:0%;box-shadow:none}
+.reveal.go .l{transform:translateX(-18%);opacity:0;filter:blur(8px)}
+.reveal.go .r{transform:translateX(18%);opacity:0;filter:blur(8px)}
+.reveal .seam{width:.2rem;box-shadow:0 0 2.4rem .5rem rgba(255,200,120,.5)}
+
+/* Linee, Cielo, Risonanze */
+.intro-line{color:var(--muted);margin:.1rem 0 1rem}
+.sky-hint{color:var(--muted);text-align:center;margin:.6rem 0 0;font-size:.98rem}
+.sky circle{animation:pulse 4.5s ease-in-out infinite}
+.rings{position:relative;width:min(13rem,60%);aspect-ratio:1;margin:0 auto 1rem}
+.rings i{position:absolute;inset:0;margin:auto;border-radius:50%;border:.125rem solid var(--c);box-shadow:0 0 1.2rem -.2rem var(--c),inset 0 0 1.2rem -.4rem var(--c);animation:ring 5s ease-in-out infinite}
+.rings i:nth-child(1){width:30%;height:30%;animation-delay:0s}
+.rings i:nth-child(2){width:60%;height:60%;animation-delay:.8s}
+.rings i:nth-child(3){width:92%;height:92%;animation-delay:1.6s;border-style:dashed}
+@keyframes ring{0%,100%{transform:scale(.96);opacity:.65}50%{transform:scale(1.04);opacity:1}}
+.tag{display:inline-block;margin:0 0 .5rem;padding:.2rem .7rem;border-radius:999rem;font-size:.78rem;font-weight:800;letter-spacing:.1em;border:.0625rem solid var(--c);color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
+.rings-legend{display:flex;flex-wrap:wrap;gap:.5rem 1rem;justify-content:center;margin:0 0 1.2rem}
+.reduce .hero-split path,.reduce .hero-split circle,.reduce .rings i,.reduce .mk-orb,.reduce .sky circle{animation:none;stroke-dashoffset:0}
+@media (prefers-reduced-motion:reduce){.hero-split path,.hero-split circle,.rings i,.mk-orb,.sky circle{animation:none;stroke-dashoffset:0}}

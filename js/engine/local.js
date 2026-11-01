@@ -3,6 +3,7 @@ import { CONTENT, content, HORIZONS } from '../content/index.js';
 import { getLang, contentLang } from '../i18n/index.js';
 import { CRISIS_EXTRA } from '../content/safety.js';
 import { parseOptions, findName, findTimeframe, findFlags, nearestHorizon } from './understand.js';
+import { classify, buildDailySet, bigAdvice, dailyLabel, DAILY_CATS } from './advice.js';
 
 const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 export { parseOptions };
@@ -12,7 +13,8 @@ export const detectCrisis = text => anyRe('CRISIS_PATTERNS', text) || CRISIS_EXT
 export const needsProfessional = text => anyRe('PRO_PATTERNS', text);
 
 /** Categoria: parole chiave di TUTTE le lingue (chi scrive in italiano può usare l'app in inglese e viceversa). */
-export function categorize(text) {
+export const categorize = text => categorizeScore(text).id;
+export function categorizeScore(text) {
   const t = ' ' + norm(text) + ' ';
   let best = 'altro', bestScore = 0;
   for (const id of Object.keys(CONTENT.it.CATEGORIES)) {
@@ -20,7 +22,7 @@ export function categorize(text) {
     for (const lang of Object.keys(CONTENT)) for (const k of CONTENT[lang].CATEGORIES[id].keywords) if (t.includes(norm(k))) score += k.trim().length > 5 ? 2 : 1;
     if (score > bestScore) { best = id; bestScore = score; }
   }
-  return best;
+  return { id: best, score: bestScore };
 }
 
 const stayScore = (option, cat) => {
@@ -83,7 +85,7 @@ export function buildContext(text, catId, now = Date.now()) {
 
 let seq = 0;
 /** Costruisce un ForkSet completo (sincrono). `titles` = {a,b} scelti dall'utente (null = default della lingua). */
-export function buildForkSet({ text, category, lang = getLang(), ctx, titles, id, createdAt, now = Date.now() }) {
+export function buildForkSet({ text, category, lang = getLang(), ctx, titles, id, createdAt, now = Date.now(), adviceVariant = 0 }) {
   lang = contentLang(lang);
   const catId = category && CONTENT.it.CATEGORIES[category] ? category : categorize(text);
   const cat = content(lang).CATEGORIES[catId];
@@ -126,6 +128,7 @@ export function buildForkSet({ text, category, lang = getLang(), ctx, titles, id
     personal,
     forks,
     echoes: cat.echoes.slice(),
+    advice: bigAdvice({ cat: catId, text, options: userA && userB ? { a: userA, b: userB } : null, lang, variant: adviceVariant }),
   };
 }
 
@@ -135,21 +138,57 @@ export function localizeForkSet(fs, lang = getLang()) {
   if (!fs || (fs.lang === lang && fs.personal) || fs.engine !== 'local') return fs;
   const t = { a: null, b: null };
   for (const f of fs.forks) if (f.fromUser && (f.id === 'a' || f.id === 'b')) t[f.id] = f.title;
-  return buildForkSet({ text: fs.question, category: fs.category, lang, ctx: fs.ctx, titles: t, id: fs.id, createdAt: fs.createdAt });
+  const variant = fs.advice ? fs.advice.variant || 0 : 0;
+  if (fs.kind === 'daily') return buildDailySet({ text: fs.question, category: fs.category, lang, titles: t, ideaIds: fs.ideaIds, variant, id: fs.id, createdAt: fs.createdAt });
+  return buildForkSet({ text: fs.question, category: fs.category, lang, ctx: fs.ctx, titles: t, id: fs.id, createdAt: fs.createdAt, adviceVariant: variant });
+}
+
+/** Un altro consiglio per la stessa domanda (stesse porte): ricostruisce il ForkSet con la variante successiva. */
+export function nextAdvice(fs) {
+  const t = { a: null, b: null };
+  for (const f of fs.forks) if (f.fromUser && (f.id === 'a' || f.id === 'b')) t[f.id] = f.title;
+  const variant = ((fs.advice && fs.advice.variant) || 0) + 1;
+  if (fs.kind === 'daily') return buildDailySet({ text: fs.question, category: fs.category, lang: fs.lang, titles: t, ideaIds: fs.ideaIds, variant, id: fs.id, createdAt: fs.createdAt });
+  return buildForkSet({ text: fs.question, category: fs.category, lang: fs.lang, ctx: fs.ctx, titles: t, id: fs.id, createdAt: fs.createdAt, adviceVariant: variant });
+}
+
+const BIGHINT = /\bdopo (\d+|[a-z]+) anni\b|\bda (\d+|[a-z]+) anni\b|\bafter (\d+|[a-z]+) years\b|\bfor (\d+|[a-z]+) years\b|lasciar\w* (il|la|lo)? ?(mio|mia)? ?(fidanzat\w*|compagn\w*|marito|moglie|ragazz\w*)|break(ing)? up with|\bdivorz\w*|\bdivorc\w*|separarmi|dimettermi|licenziarmi|quit my job|resign\w*|\bmutuo\b|mortgage|compro (un|una|la|il)? ?(appartament\w*|casa)|buy(ing)? (a )?(house|apartment|home)|trasferirmi|relocat\w*|emigrar\w*/;
+const LONG_RE = /\b(vita|futuro|carriera|anni|decenni|per sempre|life|lifetime|forever|future|career|years|decade|decades)\b/;
+
+/** Quotidiana o grande? (categoria grande: id del motore a evidenze). */
+const REL_LONG = /\b(tra|fra|entro|within|in) (un|\d+|due|tre|quattro|cinque|sei|pochi|a|two|three|four|five|six|a few) (anni|anno|mesi|years?|months?)\b|\b(next year|l anno prossimo|prossimi anni|next few years)\b/;
+export function classifyText(text) {
+  const big = categorizeScore(text);
+  const k = classify(text, big.score);
+  if (k.kind === 'daily' && BIGHINT.test(norm(text))) return { kind: 'big', id: big.id };
+  if (k.kind === 'daily' && big.score > 0) { if (REL_LONG.test(norm(text))) return { kind: 'big', id: big.id }; }
+  if (k.kind === 'daily') return k;
+  // nulla combacia: una domanda di ogni giorno qualunque → consiglio «generico» che riusa le parole dell'utente.
+  // Restano grandi solo le scelte che guardano lontano (mesi, anni, vita).
+  if (big.id === 'altro' && big.score === 0) {
+    const tf = findTimeframe(text);
+    if (!(tf && tf.days > 14) && !LONG_RE.test(norm(text))) return { kind: 'daily', id: 'generico' };
+  }
+  return { kind: 'big', id: big.id };
 }
 
 /** Anteprima rapidissima per la schermata «pensa»: cosa ho colto dalla frase (nessuna generazione completa). */
 export function preview(text, lang = getLang()) {
   lang = contentLang(lang);
-  const catId = categorize(text);
+  const k = classifyText(text);
+  if (k.kind === 'daily') return { category: k.id, kind: 'daily', label: dailyLabel(k.id, lang), chips: [], options: parseOptions(text) };
+  const catId = k.id;
   const ctx = buildContext(text, catId);
   const opts = parseOptions(text);
-  return { category: catId, label: content(lang).CATEGORIES[catId].label, chips: personalize(ctx, catId, lang).chips, options: opts };
+  return { category: catId, kind: 'big', label: content(lang).CATEGORIES[catId].label, chips: personalize(ctx, catId, lang).chips, options: opts };
 }
 
 export const localEngine = {
   id: 'local',
   label: 'Motore locale a template (evidenze curate)',
-  async generate({ text, category, lang }) { return buildForkSet({ text, category, lang }); },
+  async generate({ text, category, lang }) {
+    const k = category ? (DAILY_CATS.includes(category) ? { kind: 'daily', id: category } : { kind: 'big', id: category }) : classifyText(text);
+    return k.kind === 'daily' ? buildDailySet({ text, category: k.id, lang }) : buildForkSet({ text, category: k.id, lang });
+  },
 };
 export { HORIZONS };

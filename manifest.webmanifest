@@ -1,7 +1,7 @@
 {
  "name": "Altravì",
  "short_name": "Altravì",
- "description": "Ogni scelta ha un altrimenti. Entra in quello che scegli.",
+ "description": "Scrivi cosa devi decidere, anche la cosa più piccola: Altravì ti mostra le due strade e ti dà un consiglio chiaro.",
  "lang": "it",
  "dir": "ltr",
  "start_url": "./index.html#/",

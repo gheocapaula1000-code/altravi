@@ -291,7 +291,7 @@ export const CATEGORIES = {
         evidence: ['gilbertEbert', 'istatStay', 'atlanta', 'immune'],
       },
       c: {
-        tagline: 'Aprire uno spiraglio senza chiudere la porta',
+        tagline: 'Aprire uno spiraglio senza chiudere la strada',
         supports: [
           'Un\'ora a settimana dedicata a esplorare',
           'Due conversazioni con persone che fanno il lavoro che ti incuriosisce',
@@ -301,7 +301,7 @@ export const CATEGORIES = {
           d1: H('Fissi un piccolo passo: una chiacchierata, un curriculum aggiornato. Il primo passo toglie molta nebbia.', 'Sollievo'),
           w1: H('Hai parlato con qualcuno del mestiere che ti incuriosisce: spesso emergono dettagli che nessun annuncio racconta.', 'Scoperta'),
           m3: H('Hai più informazioni reali e meno ipotesi. La scelta, quando arriva, è molto più tua.', 'Fiducia'),
-          y1: H('Hai una scelta fatta con calma. Qualunque porta tu apra, la apri con più mappa e meno ansia.', 'Libertà'),
+          y1: H('Hai una scelta fatta con calma. Qualunque strada tu prenda, la prendi con più mappa e meno ansia.', 'Libertà'),
         },
         evidence: ['gilbertEbert', 'immune'],
       },
@@ -375,7 +375,7 @@ export const CATEGORIES = {
     echoes: ['harvard', 'liking'],
     forks: {
       a: {
-        tagline: 'Aprire la porta con parole vere',
+        tagline: 'Aprire la strada con parole vere',
         supports: [
           'Un momento tranquillo, senza fretta',
           'Una frase d\'inizio semplice: «Ci tengo a dirti una cosa»',
@@ -504,7 +504,7 @@ export const CATEGORIES = {
         evidence: ['istatSurv', 'euGrowth', 'gilbertEbert'],
       },
       b: {
-        tagline: 'Il sogno resta acceso, la porta resta aperta',
+        tagline: 'Il sogno resta acceso, la strada resta aperta',
         supports: [
           'Una riga che descrive l\'idea, da tenere in un cassetto',
           'Un\'ora al mese per ascoltare cosa succede nel tuo settore',
@@ -717,7 +717,7 @@ export const CATEGORIES = {
     echoes: ['liuReach', 'kumar'],
     forks: {
       a: {
-        tagline: 'Riaprire una porta rimasta socchiusa',
+        tagline: 'Riaprire una strada rimasta socchiusa',
         supports: [
           'Una frase semplice per cominciare: «Mi sei venuto in mente e mi ha fatto piacere»',
           'Nessuna aspettativa su quando o come arriverà la risposta',
@@ -726,13 +726,13 @@ export const CATEGORIES = {
         horizons: {
           d1: H('Hai deciso di farti vivo: il sollievo di aver scelto arriva spesso prima del messaggio stesso.', 'Sollievo', 'gilbertEbert'),
           w1: H('Un messaggio inatteso di solito è accolto con più piacere di quanto chi lo scrive pensi: nelle ricerche conta più la sorpresa dell\'eventuale imbarazzo.', 'Leggerezza', 'liuReach'),
-          m3: H('Qualunque sia stata la risposta, ora c\'è chiarezza, e la porta è stata aperta da te. Anche un legame che cambia forma resta parte della tua storia.', 'Chiarezza'),
+          m3: H('Qualunque sia stata la risposta, ora c\'è chiarezza, e la strada l\'hai aperta tu. Anche un legame che cambia forma resta parte della tua storia.', 'Chiarezza'),
           y1: H('Un anno dopo ricordi di aver avuto il coraggio di scrivere. La qualità dei legami è tra i migliori indicatori di benessere nel lungo periodo (Harvard).', 'Autenticità', 'harvard'),
         },
         evidence: ['liuReach', 'harvard', 'gilbertEbert'],
       },
       b: {
-        tagline: 'Lasciare spazio, con la porta aperta',
+        tagline: 'Lasciare spazio, con la strada aperta',
         supports: [
           'Una data in cui deciderai se fare tu il passo',
           'Un ricordo bello di questa persona, scritto in due righe',
@@ -899,7 +899,7 @@ export const PRO_PATTERNS = [
 ];
 
 // ── Personalizzazione: vincoli e contesto che l'utente scrive nella domanda ──
-// kw: parole che li rivelano; roles: una frase per porta; d1/w1: invito per i capitoli. Mai numeri, mai promesse.
+// kw: parole che li rivelano; roles: una frase per strada; d1/w1: invito per i capitoli. Mai numeri, mai promesse.
 export const PERSONAL = {
   fear: {
     label: 'qualche dubbio',
@@ -907,7 +907,7 @@ export const PERSONAL = {
     roles: {
       a: 'I dubbi mostrano che ci tieni. Un passo piccolo e una data di verifica li rendono compagni di viaggio utili.',
       b: 'Avere dubbi e scegliere di aspettare è una scelta lucida, soprattutto con una data per rifare il punto.',
-      c: 'Con qualche dubbio, la prova in piccolo è la porta più adatta: ti dà fatti al posto di ipotesi.',
+      c: 'Con qualche dubbio, la prova in piccolo è la strada più adatta: ti dà fatti al posto di ipotesi.',
     },
     d1: 'Scrivi il dubbio in una riga: dargli una forma è un primo modo di conoscerlo.',
     w1: 'Rileggi il dubbio di una settimana fa e nota se ha cambiato forma.',
@@ -927,7 +927,7 @@ export const PERSONAL = {
     label: 'budget',
     kw: /(soldi|risparm\w*|stipendio|budget|mutuo|affitto|debit\w*|\bspese\b|\bcosti?\b|economic\w*|prestito|denaro)/i,
     roles: {
-      a: 'Con i conti in mente, un buon appiglio è fissare in anticipo una cifra-limite e una data per rifare i calcoli: la tranquillità economica fa parte della porta.',
+      a: 'Con i conti in mente, un buon appiglio è fissare in anticipo una cifra-limite e una data per rifare i calcoli: la tranquillità economica fa parte della strada.',
       b: 'Restare rende i conti più prevedibili: un buon momento per mettere da parte un piccolo margine.',
       c: 'La prova in piccolo ha un vantaggio concreto: costa poco e dà numeri veri su cui decidere.',
     },
@@ -960,7 +960,7 @@ export const PERSONAL = {
     label: 'un sogno',
     kw: /(sogno|sogni|passione|da sempre|desider\w*|vorrei da)/i,
     roles: {
-      a: 'Se è un sogno, la porta ha già la cosa più importante: la direzione. Il resto si costruisce un passo alla volta.',
+      a: 'Se è un sogno, la strada ha già la cosa più importante: la direzione. Il resto si costruisce un passo alla volta.',
       b: 'Un sogno che aspetta resta un sogno acceso, se gli dai una data e un piccolo gesto di cura.',
       c: 'Provare il sogno in piccolo gli dà un corpo: è il modo più gentile di scoprire cosa vuole davvero.',
     },
@@ -978,8 +978,8 @@ export const PERSON_ROLES = {
 };
 export const PLACE_ROLES = {
   a: 'Se la scelta porta a {name}, conoscere già tre cose concrete del posto (una strada, un luogo, una persona) lo rende subito più familiare.',
-  b: 'Restare non chiude {name}: quella porta resta lì e puoi riaprirla quando vuoi.',
+  b: 'Restare non chiude {name}: quella strada resta lì e puoi riaprirla quando vuoi.',
   c: 'Una prova in piccolo di {name}, anche solo un weekend, trasforma l\'immaginazione in ricordi veri.',
 };
 export const TIME_NOTE = 'È il tempo che hai indicato («{label}»): un buon momento per rifare il punto.';
-export const FEAR_INTRO = 'Hai accennato a qualche dubbio: è un segno che ci tieni. Qui trovi porte pensate per attraversarlo, un passo alla volta.';
+export const FEAR_INTRO = 'Hai accennato a qualche dubbio: è un segno che ci tieni. Qui trovi strade pensate per attraversarlo, un passo alla volta.';

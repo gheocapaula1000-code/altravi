@@ -16,6 +16,12 @@ function cleanOpt(s) {
   for (let i = 0; i < 4; i++) { const y = x.replace(LEAD, ''); if (y === x) break; x = y; }
   return cap(x.trim());
 }
+/** Il «tema» della domanda con le parole dell'utente (per il ripiego generico): niente verbi guida, al massimo 10 parole. */
+export function topicOf(text) {
+  const t = (text || '').trim().replace(/\s+/g, ' ').split(/[.?!]/)[0] || '';
+  const x = cleanOpt(t).split(' ').slice(0, 10).join(' ').slice(0, 70).trim();
+  return x ? x.charAt(0).toLowerCase() + x.slice(1) : '';
+}
 const lastWords = (s, n) => s.trim().split(/\s+/).slice(-n).join(' ');
 const firstWords = (s, n) => s.trim().split(/\s+/).slice(0, n).join(' ');
 

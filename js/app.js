@@ -1,6 +1,7 @@
 import { t, getLang, setLang, onLang, locale, LANGS, LANG_NAMES, region } from './i18n/index.js';
 import { store, DAY_MS } from './store.js';
-import { generateForks, detectCrisis, forkSetFor, preview } from './engine/index.js';
+import { generateForks, detectCrisis, forkSetFor, preview, nextAdvice, isDaily, dailyHorizons, DAILY_CATS, dailyExample, dailyColor } from './engine/index.js';
+import { dailySign, checkinText } from './engine/advice.js';
 import { content, evidence, HORIZONS, rankEvidence } from './content/index.js';
 import { moonPhase, coincidencesFor, coincidencesAll, fmtDate, fmtTime, fmtDay, fmtShort, fmtOn } from './signals.js';
 import { h, svg, FORK_COLORS, humanize, remainingMs, evBadge, showEvidence, shortSource, downloadICS, prefersReduced, sleep } from './ui.js';
@@ -16,11 +17,14 @@ let firstRoute = true;    // al primo caricamento il focus resta all'inizio (il 
 const go = hash => { if (location.hash === hash) route(); else location.hash = hash; };
 const C = () => content();
 const hzL = (hz, kind = '') => t('hz.' + hz.key + (kind ? '.' + kind : ''));
+// Orizzonti di un ForkSet: lunghi (1 giorno · 1 settimana · 3 mesi · 1 anno) o, per le scelte di ogni giorno, brevi (tra 1 ora · stasera · domani mattina).
+const hzs = (fs, at = Date.now()) => (isDaily(fs) ? dailyHorizons(at) : HORIZONS);
+const lineHz = line => hzs(fsOf(line), line.choiceAt);
 const lineLight = line => {
-  const el = store.elapsedDays(line);
-  const unlocked = HORIZONS.filter(x => el >= x.days).length;
+  const el = store.elapsedDays(line), list = lineHz(line);
+  const unlocked = list.filter(x => el >= x.days).length;
   const noted = Object.values(line.signs || {}).filter(Boolean).length;
-  return Math.min(1, 0.25 + 0.75 * (unlocked + noted) / 8);
+  return Math.min(1, 0.25 + 0.75 * (unlocked + noted) / (2 * list.length));
 };
 // ForkSet di una linea nella lingua corrente (i titoli scritti dall'utente restano intatti)
 const fsCache = new Map();
@@ -46,7 +50,8 @@ const textSizeApply = () => {
   const lbl = document.getElementById('textSizeLbl'); if (lbl) lbl.textContent = big ? t('text.smaller') : t('text.bigger');
 };
 const chipEl = c => h('span', { class: 'cap ' + c.kind }, c.text);
-const catLabel = id => C().CATEGORIES[id].label;
+const catLabel = id => (C().CATEGORIES[id] || { label: id }).label;
+const signOf = (key) => (C().SIGNS[key] || dailySign(key, getLang()));
 const openLabel = (line, hz) => `${hzL(hz)}`;
 
 /** Testi statici dell'index.html (tab, footer, titolo) nella lingua corrente. */
@@ -63,11 +68,11 @@ function applyStatic() {
   textSizeApply();
 }
 
-/* ───────── vista: nuovo bivio ───────── */
+/* ───────── vista: chiedi (la prima schermata) ───────── */
 function viewAsk(query) {
   const from = query.get('da') ? store.getLine(query.get('da')) : null;
   const draft = store.state.draft;
-  const ta = h('textarea', { class: 'field', id: 'q', rows: '3', maxlength: '240', placeholder: t('ask.placeholder'), 'aria-label': t('ask.title'), 'aria-describedby': 'askhint err', autocomplete: 'off', autocapitalize: 'sentences', enterkeyhint: 'go' });
+  const ta = h('textarea', { class: 'field', id: 'q', rows: '2', maxlength: '240', placeholder: t('ask.placeholder'), 'aria-label': t('ask.free'), 'aria-describedby': 'askhint err', autocomplete: 'off', autocapitalize: 'sentences', enterkeyhint: 'go' });
   ta.value = sessionStorage.getItem('altravi.ask') || '';
   const err = h('p', { class: 'err', id: 'err', role: 'alert' });
   const submit = () => {
@@ -80,20 +85,40 @@ function viewAsk(query) {
   };
   ta.addEventListener('input', () => { err.textContent = ''; sessionStorage.setItem('altravi.ask', ta.value); });
   ta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); } });
-  const chips = Object.entries(C().CATEGORIES).filter(([id]) => id !== 'altro').map(([id, c]) =>
+  // domande di ogni giorno: un tocco e parte (porte + consiglio)
+  const daily = ['cena', 'serata', 'messaggio', 'outfit', 'palestra', 'compra'].map(id => {
+    const q = dailyExample(id, getLang());
+    return h('button', { class: 'chip', type: 'button', 'data-daily': id, style: `--c:${dailyColor(id)}`, onclick: () => { ta.value = q; submit(); } }, h('i', { 'aria-hidden': 'true' }), q);
+  });
+  const big = Object.entries(C().CATEGORIES).filter(([id]) => id !== 'altro').map(([id, c]) =>
     h('button', { class: 'chip', type: 'button', style: `--c:${c.color}`, onclick: () => { ta.value = c.example; err.textContent = ''; ta.focus(); } }, h('i', { 'aria-hidden': 'true' }), c.label));
+  // la linea di luce che si divide in due: si allarga mentre scrivi
+  const A = '#ffb84d', B = '#4fd1c5';
+  const hp = (x) => `M100 0 L100 14 C100 44 ${x.toFixed(1)} 40 ${x.toFixed(1)} 78`;
+  const hA = svg('path', { d: hp(100), stroke: A, style: `color:${A}` }), hB = svg('path', { d: hp(100), stroke: B, style: `color:${B}` });
+  const dA = svg('circle', { cx: 100, cy: 78, r: 2.6, fill: A, style: `color:${A}` }), dB = svg('circle', { cx: 100, cy: 78, r: 2.6, fill: B, style: `color:${B}` });
+  const splitSvg = svg('svg', { class: 'hero-split', viewBox: '0 0 200 84', 'aria-hidden': 'true', preserveAspectRatio: 'xMidYMid meet' }, hA, hB, dA, dB);
+  const setSplit = (p) => {
+    const x = 100 - (10 + 62 * p), y = 100 + (10 + 62 * p);
+    hA.setAttribute('d', hp(x)); hB.setAttribute('d', hp(y));
+    dA.setAttribute('cx', x.toFixed(1)); dB.setAttribute('cx', y.toFixed(1));
+  };
+  setSplit(0.15);
+  requestAnimationFrame(() => setSplit(0.15));
+  ta.addEventListener('input', () => setSplit(Math.min(1, 0.15 + ta.value.length / 38)));
   mount(h('section', { class: 'hero' },
-    h('div', { class: 'lightline', 'aria-hidden': 'true' }),
-    from && h('p', { class: 'kicker' }, t('ask.from', { title: chosenFork(from).title })),
+    splitSvg,
+    from ? h('p', { class: 'kicker' }, t('ask.from', { title: chosenFork(from).title })) : h('p', { class: 'kicker' }, t('ask.kicker')),
     h('h1', null, t('ask.title')),
     h('p', { class: 'lead', id: 'askhint' }, t('ask.hint')),
     ta, err,
-    h('p', { class: 'muted small', style: 'margin-bottom:.2rem' }, t('ask.examples')),
-    h('div', { class: 'chips' }, chips),
     h('div', { class: 'row' },
-      h('button', { class: 'btn primary', type: 'button', id: 'go', onclick: submit }, t('ask.cta')),
+      h('button', { class: 'btn primary big', type: 'button', id: 'go', onclick: submit }, t('ask.cta')),
       draft && h('a', { class: 'btn', href: '#/porte' }, t('ask.resume'))),
-    h('p', { class: 'muted small', style: 'margin-top:1rem' }, t('ask.privacy') + ' ' + t('offline.ok')),
+    h('p', { class: 'promise' }, t('ask.promise')),
+    h('p', { class: 'muted small', style: 'margin:1rem 0 .2rem' }, t('ask.examples')),
+    h('div', { class: 'chips', id: 'dailyChips' }, daily),
+    h('details', { class: 'more' }, h('summary', null, t('ask.big')), h('div', { class: 'chips' }, big)),
   ));
   if (!prefersReduced() && !quiet) setTimeout(() => { if (document.activeElement === document.body || document.activeElement === view || view.contains(document.activeElement)) ta.focus({ preventScroll: true }); }, 700);
 }
@@ -136,12 +161,12 @@ async function viewThink() {
 /* ───────── vista: le porte ───────── */
 function forkPaths(fs, p, showC) {
   const n = showC ? 3 : 2;
-  const targets = n === 3 ? [40, 150, 260] : [60, 240];
+  const targets = n === 3 ? [50, 150, 250] : [75, 225];
   const order = n === 3 ? ['a', 'c', 'b'] : ['a', 'b'];
-  const spread = 0.1 + 0.9 * p;
+  const y0 = 12 + (1 - p) * 26; // le linee si separano prima, man mano che il tempo scorre
   return order.map((id, i) => {
-    const x = 150 + (targets[i] - 150) * spread;
-    return { id, d: `M150 4 L150 22 C150 62 ${x.toFixed(1)} 58 ${x.toFixed(1)} 116` };
+    const x = targets[i];
+    return { id, d: `M150 4 L150 ${y0.toFixed(1)} C150 ${(y0 + 44).toFixed(1)} ${x} ${(y0 + 20).toFixed(1)} ${x} 116` };
   });
 }
 
@@ -149,6 +174,7 @@ function viewForks() {
   const draft = store.state.draft;
   if (!draft) { go('#/nuovo'); return; }
   const fs = forkSetFor(draft.forkSet);
+  const daily = isDaily(fs), HZ = hzs(fs), N = HZ.length - 1;
   const P = fs.personal || { chips: [], forkNotes: {}, horizonNotes: {}, intro: null, mark: null };
   const now = Date.now();
   const reduced = prefersReduced() || quiet;
@@ -156,14 +182,13 @@ function viewForks() {
 
   // SVG delle linee che si dividono
   const pathEls = {};
-  const lines = svg('svg', { class: 'fork-lines', viewBox: '0 0 300 120', 'aria-hidden': 'true', preserveAspectRatio: 'xMidYMid meet' });
+  const lines = svg('svg', { class: 'fork-lines', viewBox: '0 0 300 120', 'aria-hidden': 'true', preserveAspectRatio: 'none' });
   const glowEls = {};
   fs.forks.forEach(f => {
     const g = svg('path', { class: 'glow', stroke: colorOf(f.id) }); const p = svg('path', { stroke: colorOf(f.id), style: `color:${colorOf(f.id)}` });
     glowEls[f.id] = g; pathEls[f.id] = p; lines.append(g, p);
     if (f.hidden) { g.style.opacity = 0; p.style.opacity = 0; }
   });
-  const root = svg('circle', { cx: 150, cy: 4, r: 3.2, fill: '#fff' }); lines.append(root);
   const drawLines = (p) => {
     forkPaths(fs, p, thirdShown).forEach(({ id, d }) => {
       pathEls[id].setAttribute('d', d); glowEls[id].setAttribute('d', d);
@@ -174,7 +199,7 @@ function viewForks() {
   // schede-porta
   const nowBoxes = {};
   const renderNow = (fork, animate) => {
-    const hz = HORIZONS[hIdx], d = fork.horizons[hz.key];
+    const hz = HZ[hIdx], d = fork.horizons[hz.key];
     const box = nowBoxes[fork.id];
     const hn = (P.horizonNotes && P.horizonNotes[hz.key]) || [];
     const fill = () => box.replaceChildren(...[
@@ -195,41 +220,82 @@ function viewForks() {
         h('div', null, h('h3', null, fork.title), h('p', { class: 'tag' }, fork.tagline))),
       notes.length ? h('div', { class: 'for-you' }, h('b', null, t('fork.foryou')), notes.map(n => h('p', null, n))) : null,
       box,
-      h('details', { class: 'needs' }, h('summary', null, t('fork.needs')), h('ul', null, fork.supports.map(s => h('li', null, s)))),
-      h('details', { class: 'needs' }, h('summary', null, t('fork.sources')),
-        h('ul', null, fork.evidence.map(id => h('li', null, h('button', { class: 'badge srcbtn', type: 'button', onclick: () => showEvidence(id) }, evidence(id).headline))))),
+      h('details', { class: 'needs' }, h('summary', null, t(daily ? 'fork.needs.daily' : 'fork.needs')), h('ul', null, fork.supports.map(s => h('li', null, s)))),
+      fork.evidence.length ? h('details', { class: 'needs' }, h('summary', null, t('fork.sources')),
+        h('ul', null, fork.evidence.map(id => h('li', null, h('button', { class: 'badge srcbtn', type: 'button', onclick: () => showEvidence(id) }, evidence(id).headline))))) : null,
       h('button', { class: 'btn primary block', type: 'button', 'data-choose': fork.id, onclick: ev => enterDoor(ev, fork) }, t('fork.choose')),
     );
     renderNow(fork, false);
     return card;
   };
 
+  // i due futuri, uno accanto all'altro: la differenza si vede a colpo d'occhio
+  const marksEl = h('div', { class: 'marks', 'aria-hidden': 'true' });
+  const firstSentence = (x) => { const m = x.match(/^.*?[.!?](\s|$)/); const f = (m ? m[0] : x).trim(); return f.length > 96 ? f.slice(0, 93).trim() + '…' : f; };
+  const renderMarks = () => {
+    const hz = HZ[hIdx];
+    const order = (thirdShown ? ['a', 'c', 'b'] : ['a', 'b']).map(id => fs.forks.find(f => f.id === id)).filter(Boolean);
+    marksEl.style.setProperty('--n', order.length);
+    marksEl.replaceChildren(...order.map(f => {
+      const d = f.horizons[hz.key];
+      return h('div', { class: 'mk', style: `--c:${colorOf(f.id)}` },
+        h('i', { class: 'mk-orb' }), h('b', { class: 'mk-feel' }, d.feel), h('span', { class: 'mk-name' }, f.title), h('p', { class: 'mk-txt' }, firstSentence(d.text)));
+    }));
+    whenEl.textContent = t('fork.diverge', { when: hzL(hz) });
+  };
+  const whenEl = h('p', { class: 'diverge-when' });
   const doorsEl = h('div', { class: 'doors', id: 'doors' });
   fs.forks.filter(f => !f.hidden).forEach(f => doorsEl.append(doorCard(f)));
 
   const third = fs.forks.find(f => f.hidden);
   const thirdBox = h('div');
+
+  // Il mio consiglio: dopo le porte. «Un altro consiglio» scorre le versioni senza cambiare le porte.
+  const adviceBox = h('section', { class: 'advice', id: 'advice', 'aria-labelledby': 'advH' });
+  const markRec = pick => {
+    doorsEl.querySelectorAll('.rec').forEach(n => n.remove());
+    const card = doorsEl.querySelector(`[data-fork="${pick}"] .door-top`);
+    if (card) card.append(h('span', { class: 'rec' }, t('advice.rec'), h('span', { class: 'sr' }, ' · ' + t('advice.rec.sr'))));
+  };
+  const renderAdvice = (adv, animate) => {
+    if (!adv) { adviceBox.replaceChildren(); return; }
+    adviceBox.classList.toggle('swap', !!animate);
+    adviceBox.replaceChildren(
+      h('h2', { id: 'advH', class: 'advice-h' }, h('span', { class: 'advice-lbl' }, t('advice.label') + ':'), ' ', adv.headline),
+      h('div', { class: 'advice-cols' },
+        h('div', null, h('h3', null, t('advice.why')), h('ul', null, adv.why.map(w => h('li', null, w)))),
+        h('div', null, h('h3', null, t('advice.step')), h('p', { class: 'advice-step' }, adv.step))),
+      h('p', { class: 'muted small' }, adv.note),
+      h('div', { class: 'row' },
+        h('button', { class: 'btn', type: 'button', id: 'another', onclick: () => {
+          const nf = nextAdvice(fs); store.setDraft(nf, draft.parentLineId);
+          fs.advice = nf.advice; renderAdvice(nf.advice, true); if (daily) markRec(nf.advice.pick);
+          setTimeout(() => adviceBox.classList.remove('swap'), 400);
+        } }, t('advice.another'))));
+    if (daily && adv.pick) markRec(adv.pick);
+  };
   const showThird = () => {
     if (thirdShown) return; thirdShown = true;
     thirdBox.replaceChildren();
     doorsEl.append(doorCard(third));
-    drawLines(range.value / 3);
+    drawLines(range.value / N); renderMarks();
     doorsEl.lastChild.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'center' });
   };
 
   // scrub del tempo
-  const markIdx = P.mark ? HORIZONS.findIndex(x => x.key === P.mark) : -1;
-  const range = h('input', { type: 'range', id: 'time', min: '0', max: '3', step: '0.01', value: '0', 'aria-valuetext': hzL(HORIZONS[0]), 'aria-describedby': 'scrubhint' });
-  const tickBtns = HORIZONS.map((hz, i) => h('button', { class: 'tick' + (i === markIdx ? ' mine' : ''), type: 'button', 'data-tick': i,
+  const markIdx = P.mark ? HZ.findIndex(x => x.key === P.mark) : -1;
+  const range = h('input', { type: 'range', id: 'time', min: '0', max: String(N), step: '0.01', value: '0', 'aria-valuetext': hzL(HZ[0]), 'aria-describedby': 'scrubhint' });
+  const tickBtns = HZ.map((hz, i) => h('button', { class: 'tick' + (i === markIdx ? ' mine' : ''), type: 'button', 'data-tick': i,
     onclick: () => { interacted = true; animateTo(i); } },
     i === markIdx ? '★ ' : '', hzL(hz, 'short'), i === markIdx ? h('span', { class: 'sr' }, ' · ' + t('fork.yourdate')) : null));
   const setIdx = (i, animate) => {
     if (i === hIdx && animate) return;
-    hIdx = i; range.setAttribute('aria-valuetext', hzL(HORIZONS[i]) + (i === markIdx ? ' · ' + t('fork.yourdate') : ''));
+    hIdx = i; range.setAttribute('aria-valuetext', hzL(HZ[i]) + (i === markIdx ? ' · ' + t('fork.yourdate') : ''));
     tickBtns.forEach((b, k) => b.setAttribute('aria-current', String(k === i)));
     fs.forks.forEach(f => { if (nowBoxes[f.id] && (!f.hidden || thirdShown)) renderNow(f, animate); });
+    renderMarks();
   };
-  const onRange = () => { drawLines(range.value / 3); setIdx(Math.round(range.value), true); };
+  const onRange = () => { drawLines(range.value / N); setIdx(Math.round(range.value), true); };
   range.addEventListener('input', () => { interacted = true; onRange(); });
   range.addEventListener('change', () => { range.value = Math.round(range.value); onRange(); });
   range.addEventListener('pointerdown', () => { interacted = true; });
@@ -246,10 +312,10 @@ function viewForks() {
   };
   cleanup.push(() => cancelAnimationFrame(raf));
   tickBtns[0].setAttribute('aria-current', 'true');
-  drawLines(0);
+  drawLines(0); renderMarks();
 
   const scrub = h('div', { class: 'scrub' },
-    h('label', { for: 'time' }, t('fork.scrub'), h('span', { class: 'hint', id: 'scrubhint' }, ' · ' + t('fork.sub'))),
+    h('label', { for: 'time' }, t('fork.scrub'), h('span', { class: 'hint', id: 'scrubhint' }, ' · ' + t(daily ? 'fork.sub.daily' : 'fork.sub'))),
     range, h('div', { class: 'ticks' }, tickBtns));
 
   // sipario: le TUE parole sulle due porte che si aprono
@@ -267,18 +333,21 @@ function viewForks() {
   const qText = fs.question.length > 170 ? fs.question.slice(0, 167) + '…' : fs.question;
   mount(
     h('div', { class: 'fork-head' },
-      h('p', { class: 'kicker' }, `${fs.categoryLabel} · ${t('fork.title')}`),
+      h('p', { class: 'kicker' }, `${fs.categoryLabel} · ${t(daily ? 'fork.title.daily' : 'fork.title')}`),
       h('h1', { class: 'q-title' }, '«' + qText + '»'),
       caught,
       P.intro ? h('p', { class: 'fear-intro' }, P.intro) : null,
-      lines),
+      h('div', { class: 'diverge' }, whenEl, h('span', { class: 'origin', 'aria-hidden': 'true' }), lines, marksEl)),
     scrub,
+    h('p', { class: 'spark' }, t('fork.spark')),
     markIdx >= 0 ? h('p', { class: 'markleg' }, '★ ' + t('fork.yourdate') + ': ' + P.chips.find(c => c.kind === 'time').text) : null,
     fs.needsPro && h('p', { class: 'note pro' }, t('fork.pro')),
     doorsEl, thirdBox,
-    h('p', { class: 'note' }, t('fork.honest')),
-    h('p', { class: 'note' }, t('fork.final')),
+    adviceBox,
+    h('p', { class: 'note' }, t(daily ? 'fork.honest.daily' : 'fork.honest')),
+    h('p', { class: 'note' }, t(daily ? 'fork.final.daily' : 'fork.final')),
   );
+  renderAdvice(fs.advice, false);
 
   // sequenza cinematica (accorciata: porte visibili in ~1,6 s)
   const teaser = () => {
@@ -295,7 +364,7 @@ function viewForks() {
   // tutorial gestuale: il tempo scorre da solo una volta, poi torna all'inizio
   setTimeout(() => {
     if (interacted) return;
-    animateTo(3, 2400, () => setTimeout(() => { if (!interacted) animateTo(0, 800); }, 600));
+    animateTo(N, 2400, () => setTimeout(() => { if (!interacted) animateTo(0, 800); }, 600));
   }, 1800);
 }
 
@@ -316,10 +385,11 @@ const icsFor = (line, hz) => () => downloadICS({ title: t('ics.title', { ch: hzL
 function viewBorn(id) {
   const line = store.getLine(id); if (!line) { go('#/'); return; }
   const fsl = fsOf(line);
-  const f = chosenFork(line), c = colorOf(f.id), cat = C().CATEGORIES[fsl.category];
+  const f = chosenFork(line), c = colorOf(f.id), cat = C().CATEGORIES[fsl.category] || { echoes: [] };
+  const daily = isDaily(fsl);
   const coinc = coincidencesFor(line, store.state.lines)[0];
   const echoId = rankEvidence((cat.echoes || []).filter(e => evidence(e) && evidence(e).echo), region())[0];
-  const next = HORIZONS[0];
+  const next = hzs(fsl, line.choiceAt)[0];
   mount(
     h('section', { class: 'center stack', style: `--c:${c}` },
       h('div', { class: 'row', style: 'justify-content:center' }, h('div', { class: 'orb', style: '--l:.35', 'aria-hidden': 'true' })),
@@ -328,7 +398,9 @@ function viewBorn(id) {
       h('p', { class: 'lead' }, t('born.sub', { title: f.title })),
     ),
     h('div', { class: 'grid', style: 'margin-top:1.4rem' },
-      h('div', { class: 'card glow', style: `--c:${c}` },
+      daily ? h('div', { class: 'card glow', style: `--c:${c}` },
+        h('p', { class: 'kicker' }, t('born.daily.first')),
+        h('p', null, fsl.advice ? fsl.advice.step : f.supports[2])) : h('div', { class: 'card glow', style: `--c:${c}` },
         h('p', { class: 'kicker' }, t('born.first')),
         h('p', null, t('born.first.text')),
         evBadge('gilbertEbert')),
@@ -341,9 +413,9 @@ function viewBorn(id) {
         h('p', { class: 'muted small' }, t('born.coinc.note'))),
     ),
     h('div', { class: 'card', style: 'margin-top:1rem;text-align:center' },
-      h('h2', null, t('born.next')),
+      h('h2', null, t(daily ? 'born.daily.next' : 'born.next')),
       h('div', { class: 'row', style: 'justify-content:center' },
-        h('button', { class: 'btn', type: 'button', id: 'cal', onclick: icsFor(line, next) }, t('born.cal')),
+        daily ? null : h('button', { class: 'btn', type: 'button', id: 'cal', onclick: icsFor(line, next) }, t('born.cal')),
         h('a', { class: 'btn primary', href: '#/linea/' + line.id }, t('born.line')))),
     h('p', { class: 'center', style: 'margin-top:1rem' }, h('a', { href: '#/cielo' }, t('born.sky'))),
   );
@@ -351,11 +423,13 @@ function viewBorn(id) {
 
 /* ───────── vista: home / linee ───────── */
 function chapterStatus(line) {
-  const el = store.elapsedDays(line), now = store.now();
-  const unseen = HORIZONS.filter(x => el >= x.days && !store.isSeen(line.id, x.key));
-  const nextHz = HORIZONS.find(x => el < x.days);
+  const el = store.elapsedDays(line), now = store.now(), list = lineHz(line);
+  const unseen = list.filter(x => el >= x.days && !store.isSeen(line.id, x.key));
+  const nextHz = list.find(x => el < x.days);
   return { unseen, nextHz, next: nextHz && humanize(remainingMs(line, nextHz, now)) };
 }
+
+const needsCheckin = line => { const fsl = fsOf(line); return isDaily(fsl) && !line.checkin && store.elapsedDays(line) >= lineHz(line)[1].days; };
 
 function viewHome() {
   const lines = store.state.lines;
@@ -370,7 +444,7 @@ function viewHome() {
         h('div', { class: 'orb', style: `--l:${lineLight(line)};width:4rem`, 'aria-hidden': 'true' }),
         h('div', null,
           h('p', { class: 'kicker' }, fsOf(line).categoryLabel),
-          h('h3', { style: 'margin:0' }, fk.title, s.unseen.length ? h('span', { class: 'pill-new' }, t('line.new')) : null),
+          h('h3', { style: 'margin:0' }, fk.title, s.unseen.length ? h('span', { class: 'pill-new' }, t('line.new')) : null, needsCheckin(line) ? h('span', { class: 'pill-new', 'data-checkin-pill': '1' }, t('home.checkin')) : null),
           h('p', { class: 'muted', style: 'margin:.2rem 0 0' }, s.unseen.length
             ? `${t('home.opened')}: ${hzL(s.unseen[s.unseen.length - 1])}`
             : s.nextHz ? t('home.waiting', { when: `${hzL(s.nextHz)} — ${s.next}` }) : t('home.allopen')))),
@@ -382,6 +456,7 @@ function viewHome() {
     h('p', { class: 'lead' }, st.unseen.length
       ? t('home.chapter.open', { title: f.title, ch: hzL(lastUnseen) })
       : st.nextHz ? t('home.next', { title: f.title, when: st.next }) : t('home.allopen2', { title: f.title })),
+    h('p', { class: 'intro-line' }, t('home.what')),
     store.state.settings.demoOffsetDays > 0 && h('p', null, h('span', { class: 'demo-flag' }, t('line.demo', { n: Math.round(store.state.settings.demoOffsetDays) }))),
     h('div', { class: 'row', style: 'margin:1rem 0' },
       h('a', { class: 'btn primary', href: '#/linea/' + top.id }, st.unseen.length ? t('home.open.new') : t('home.go')),
@@ -392,16 +467,33 @@ function viewHome() {
   );
 }
 
+/* ───────── «Com'è andata?» (scelte di ogni giorno) ───────── */
+function checkinCard(line, c, meter, orb) {
+  const X = checkinText(getLang());
+  const reply = h('p', { class: 'checkin-r', role: 'status' }, line.checkin ? X[line.checkin + '_r'] : '');
+  const btns = ['good', 'ok', 'skip'].map(k => h('button', { class: 'tgl', type: 'button', 'data-checkin': k, 'aria-pressed': String(line.checkin === k), onclick: () => {
+    store.setCheckin(line.id, k);
+    btns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.checkin === k)));
+    reply.textContent = X[k + '_r'];
+    const nl = lineLight(line); orb.style.setProperty('--l', nl); meter.style.setProperty('--l', nl);
+    if (!card.querySelector('.checkin-more')) card.append(h('p', { class: 'checkin-more' }, h('span', { class: 'muted small' }, t('line.checkin.done') + ' '), h('a', { href: '#/nuovo' }, t('line.checkin.again'))));
+  } }, X[k]));
+  const card = h('section', { class: 'card checkin glow', style: `--c:${c}`, 'aria-labelledby': 'ckH' },
+    h('h2', { id: 'ckH' }, X.q), h('div', { class: 'row' }, btns), reply);
+  return card;
+}
+
 /* ───────── vista: linea ───────── */
 function viewLine(id) {
   const line = store.getLine(id); if (!line) { go('#/'); return; }
   const fsl = fsOf(line), P = fsl.personal || { chips: [], forkNotes: {}, horizonNotes: {} };
   const f = chosenFork(line), c = colorOf(f.id), el = store.elapsedDays(line), now = store.now();
+  const daily = isDaily(fsl), HZ = lineHz(line);
   const L = lineLight(line);
   const others = fsl.forks.filter(x => x.id !== f.id);
   const meter = h('div', { class: 'light-meter', 'aria-hidden': 'true' }, h('i'));
   const orb = h('div', { class: 'orb', style: `--l:${L}`, 'aria-hidden': 'true' });
-  const chapters = HORIZONS.map(hz => {
+  const chapters = HZ.map(hz => {
     const unlocked = el >= hz.days, isNew = unlocked && !store.isSeen(line.id, hz.key);
     const d = f.horizons[hz.key];
     if (!unlocked) {
@@ -430,11 +522,11 @@ function viewLine(id) {
       h('p', null, d.text),
       h('div', { class: 'row', style: 'gap:.5rem' }, h('span', { class: 'feel' }, d.feel), evBadge(d.ev)),
       hn.length ? h('div', { class: 'hnote' }, hn.map(n => h('p', null, n))) : null,
-      h('div', { class: 'sign' }, h('b', null, t('line.sign') + ': '), content().SIGNS[hz.key], h('div', { style: 'margin-top:.6rem' }, signBtn)),
+      h('div', { class: 'sign' }, h('b', null, t('line.sign') + ': '), signOf(hz.key), h('div', { style: 'margin-top:.6rem' }, signBtn)),
       h('div', { style: 'margin-top:.6rem' }, peekBtn), peekBox);
   });
   meter.style.setProperty('--l', L);
-  const nextHz = HORIZONS.find(x => el < x.days);
+  const nextHz = HZ.find(x => el < x.days);
   const notes = (P.forkNotes && P.forkNotes[f.id]) || [];
   mount(
     h('div', { style: `--c:${c};--l:${L}` },
@@ -447,20 +539,21 @@ function viewLine(id) {
           h('p', { class: 'small muted', style: 'margin:.5rem 0 0' }, t('line.light')), meter)),
       h('p', { class: 'lead' }, '«' + line.question + '»'),
       P.chips.length ? h('div', { class: 'caught left' }, h('span', { class: 'think-lbl' }, t('line.ctx') + ':'), P.chips.map(chipEl)) : null,
+      daily && el >= HZ[1].days ? checkinCard(line, c, meter, orb) : null,
       h('div', { class: 'rail' },
         h('article', { class: 'card chap', style: `--c:${c}` },
           h('div', { class: 'when' }, t('line.day0')),
           h('p', null, f.tagline + '.'),
           notes.length ? h('div', { class: 'for-you' }, h('b', null, t('fork.foryou')), notes.map(n => h('p', null, n))) : null,
-          h('details', { class: 'needs' }, h('summary', null, t('fork.needs')), h('ul', null, f.supports.map(s => h('li', null, s))))),
+          h('details', { class: 'needs' }, h('summary', null, t(daily ? 'fork.needs.daily' : 'fork.needs')), h('ul', null, f.supports.map(s => h('li', null, s))))),
         chapters),
       h('div', { class: 'row' },
         h('a', { class: 'btn primary', href: '#/nuovo?da=' + line.id }, t('line.child')),
-        nextHz && h('button', { class: 'btn', type: 'button', id: 'cal', onclick: icsFor(line, nextHz) }, t('line.cal')),
+        nextHz && !daily && h('button', { class: 'btn', type: 'button', id: 'cal', onclick: icsFor(line, nextHz) }, t('line.cal')),
         h('a', { class: 'btn', href: '#/cielo' }, t('born.sky')))
     ));
   // segna come visti DOPO il rendering (così l'animazione "nuovo" si vede una volta)
-  HORIZONS.filter(x => el >= x.days).forEach(x => store.markSeen(line.id, x.key));
+  HZ.filter(x => el >= x.days).forEach(x => store.markSeen(line.id, x.key));
 }
 
 /* ───────── vista: cielo ───────── */
@@ -497,7 +590,7 @@ function viewSky() {
     s.append(a);
   });
   mount(
-    h('h1', null, t('sky.title')), h('p', { class: 'lead' }, t('sky.sub')), s,
+    h('h1', null, t('sky.title')), h('p', { class: 'lead' }, t('sky.sub')), s, h('p', { class: 'sky-hint' }, t('sky.hint') + ' ' + t('sky.spark')),
     h('div', { class: 'legend' }, h('span', null, h('b', { class: 'dot a', 'aria-hidden': 'true' }, '● '), t('sky.legend.1')), h('span', null, h('b', { class: 'dot b', 'aria-hidden': 'true' }, '● '), t('sky.legend.2')), h('span', null, '┄ ' + t('sky.legend.3'))),
     h('ul', { class: 'clean' }, lines.map((l, i) => h('li', null, h('a', { href: '#/linea/' + l.id }, `${i + 1}. ${chosenFork(l).title}`), ` · ${fmtDate(l.choiceAt)}`))),
     h('div', { class: 'row' }, h('a', { class: 'btn primary', href: '#/nuovo' }, t('home.new')), h('a', { class: 'btn', href: '#/libro' }, t('sky.book'))));
@@ -507,21 +600,26 @@ function viewSky() {
 function viewEcho() {
   const lines = store.state.lines;
   const cats = [...new Set(lines.map(l => fsOf(l).category))];
-  const echoIds = rankEvidence([...new Set(cats.flatMap(cid => C().CATEGORIES[cid].echoes))].filter(id => evidence(id) && evidence(id).echo), region());
+  const echoIds = rankEvidence([...new Set(cats.flatMap(cid => (C().CATEGORIES[cid] || { echoes: [] }).echoes))].filter(id => evidence(id) && evidence(id).echo), region());
   const coinc = coincidencesAll(lines).slice(0, 6);
-  const catName = lines.length ? C().CATEGORIES[fsOf(lines[lines.length - 1]).category].label.toLowerCase() : C().CATEGORIES.lavoro.label.toLowerCase();
+  const catName = lines.length ? fsOf(lines[lines.length - 1]).categoryLabel.toLowerCase() : C().CATEGORIES.lavoro.label.toLowerCase();
   const opt = h('input', { type: 'checkbox', id: 'optin', checked: store.state.settings.resonanceOptIn || null, onchange: e => store.setSetting('resonanceOptIn', e.target.checked) });
   mount(
     h('h1', null, t('echo.title')), h('p', { class: 'lead' }, t('echo.sub')),
+    h('div', { class: 'rings', role: 'img', 'aria-label': t('echo.rings') }, h('i', { style: '--c:var(--amber)' }), h('i', { style: '--c:var(--teal)' }), h('i', { style: '--c:var(--violet)' })),
+    h('div', { class: 'rings-legend' }, h('span', { class: 'tag', style: '--c:var(--amber)' }, t('echo.tag.real')), h('span', { class: 'tag', style: '--c:var(--teal)' }, t('echo.tag.calc')), h('span', { class: 'tag', style: '--c:var(--violet)' }, t('echo.tag.sim'))),
     !lines.length && h('div', { class: 'card', style: 'margin-bottom:1rem' }, h('p', null, t('echo.empty')), h('a', { class: 'btn primary', href: '#/nuovo' }, t('home.new'))),
     h('div', { class: 'grid' },
       h('section', { class: 'card', 'aria-labelledby': 'e1' },
+        h('span', { class: 'tag', style: '--c:var(--amber)' }, t('echo.tag.real')),
         h('p', { class: 'kicker', id: 'e1' }, t('echo.public')), h('p', { class: 'muted small' }, t('echo.public.note')), h('p', { class: 'muted small' }, t('echo.region', { region: t('region.' + region()) })),
         echoIds.length ? echoIds.map(id => h('div', { class: 'echo-item' }, h('p', { style: 'margin:0 0 .4rem' }, evidence(id).echo), evBadge(id))) : h('p', { class: 'muted' }, '—')),
       h('section', { class: 'card', 'aria-labelledby': 'e2' },
+        h('span', { class: 'tag', style: '--c:var(--teal)' }, t('echo.tag.calc')),
         h('p', { class: 'kicker', id: 'e2' }, t('echo.coinc')), h('p', { class: 'muted small' }, t('echo.coinc.note')),
         coinc.length ? coinc.map(cn => h('div', { class: 'echo-item' }, h('b', null, `${cn.title} · ${t('echo.line', { n: cn.n })}`), h('p', { style: 'margin:.2rem 0 0' }, cn.text))) : h('p', { class: 'muted' }, '—')),
       h('section', { class: 'card glow', style: '--c:var(--teal)', 'aria-labelledby': 'e3' },
+        h('span', { class: 'tag', style: '--c:var(--violet)' }, t('echo.tag.sim')),
         h('span', { class: 'ribbon' }, t('echo.net.sim')),
         h('p', { class: 'kicker', id: 'e3' }, t('echo.net')),
         h('p', { style: 'font-family:var(--serif);font-size:1.25rem;border-left:.2rem dashed var(--teal);padding-left:.9rem' }, t('echo.net.example', { cat: catName })),
@@ -547,7 +645,8 @@ function viewBook(query) {
     const fsl = fsOf(line), f = chosenFork(line), el = store.elapsedDays(line);
     const P = fsl.personal || { chips: [], horizonNotes: {}, forkNotes: {} };
     const others = fsl.forks.filter(x => x.id !== f.id && !x.hidden);
-    const rows = HORIZONS.map(hz => {
+    const BH = hzs(fsl, line.choiceAt);
+    const rows = BH.map(hz => {
       const d = f.horizons[hz.key];
       if (el < hz.days) return h('div', { class: 'bk-ch locked' }, h('h4', null, hzL(hz, 'long')), h('p', { class: 'muted' }, t('book.locked', { date: fmtOn(line.choiceAt + hz.days * DAY_MS) })));
       const hn = (P.horizonNotes && P.horizonNotes[hz.key]) || [];
@@ -560,7 +659,7 @@ function viewBook(query) {
     const alt = withOthers && others.length ? h('div', { class: 'bk-others' },
       h('h4', null, t('book.others.title')), h('p', { class: 'muted small' }, t('book.others.note2')),
       others.map(o => h('div', null, h('h5', null, o.title),
-        HORIZONS.filter(hz => el >= hz.days).map(hz => h('p', null, h('b', null, hzL(hz, 'short') + ': '), o.horizons[hz.key].text, o.horizons[hz.key].ev ? cite(o.horizons[hz.key].ev) : null))))) : null;
+        BH.filter(hz => el >= hz.days).map(hz => h('p', null, h('b', null, hzL(hz, 'short') + ': '), o.horizons[hz.key].text, o.horizons[hz.key].ev ? cite(o.horizons[hz.key].ev) : null))))) : null;
     const coinc = coincidencesFor(line, lines)[0];
     return h('section', { class: 'bk-line', id: 'bk' + (i + 1), 'aria-labelledby': 'bkh' + (i + 1) },
       h('p', { class: 'kicker' }, `${t('book.chapter', { n: i + 1 })} · ${fsl.categoryLabel}`),

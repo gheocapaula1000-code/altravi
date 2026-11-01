@@ -291,7 +291,7 @@ export const CATEGORIES = {
         evidence: ['gilbertEbert', 'istatStay', 'atlanta', 'immune'],
       },
       c: {
-        tagline: 'Open a crack without closing the door',
+        tagline: 'Open a little without closing the way',
         supports: [
           'One hour a week set aside for exploring',
           'Two conversations with people who do the job that intrigues you',
@@ -301,7 +301,7 @@ export const CATEGORIES = {
           d1: H('You set one small step: a chat, an updated CV. The first step clears a lot of fog.', 'Relief'),
           w1: H('You have talked to someone about the trade that intrigues you: details often emerge that no job ad tells.', 'Discovery'),
           m3: H('You have more real information and fewer hypotheses. The choice, when it comes, is much more yours.', 'Confidence'),
-          y1: H('You have a choice made calmly. Whichever door you open, you open it with more of a map and less worry.', 'Freedom'),
+          y1: H('You have a choice made calmly. Whichever path you take, you take it with more of a map and less worry.', 'Freedom'),
         },
         evidence: ['gilbertEbert', 'immune'],
       },
@@ -375,7 +375,7 @@ export const CATEGORIES = {
     echoes: ['harvard', 'liking'],
     forks: {
       a: {
-        tagline: 'Opening the door with true words',
+        tagline: 'Opening the way with true words',
         supports: [
           'A quiet moment, with no rush',
           'A simple opening line: “There is something I would like to tell you”',
@@ -504,7 +504,7 @@ export const CATEGORIES = {
         evidence: ['istatSurv', 'euGrowth', 'gilbertEbert'],
       },
       b: {
-        tagline: 'The dream stays lit, the door stays open',
+        tagline: 'The dream stays lit, the path stays open',
         supports: [
           'One line describing the idea, to keep in a drawer',
           'One hour a month to listen to what is happening in your sector',
@@ -717,7 +717,7 @@ export const CATEGORIES = {
     echoes: ['liuReach', 'kumar'],
     forks: {
       a: {
-        tagline: 'Reopening a door left ajar',
+        tagline: 'Reopening a path left ajar',
         supports: [
           'A simple line to begin: “You came to mind and it made me happy”',
           'No expectation about when or how the answer will arrive',
@@ -726,13 +726,13 @@ export const CATEGORIES = {
         horizons: {
           d1: H('You decided to get in touch: the relief of having chosen often comes before the message itself.', 'Relief', 'gilbertEbert'),
           w1: H('An unexpected message is usually received with more pleasure than the sender thinks: in the research the surprise counts for more than any awkwardness.', 'Lightness', 'liuReach'),
-          m3: H('Whatever the answer was, there is clarity now, and the door was opened by you. Even a bond that changes shape remains part of your story.', 'Clarity'),
+          m3: H('Whatever the answer was, there is clarity now, and you were the one who opened the way. Even a bond that changes shape remains part of your story.', 'Clarity'),
           y1: H('A year later you remember having had the courage to write. The quality of relationships is among the best indicators of long-term wellbeing (Harvard).', 'Authenticity', 'harvard'),
         },
         evidence: ['liuReach', 'harvard', 'gilbertEbert'],
       },
       b: {
-        tagline: 'Leaving space, with the door open',
+        tagline: 'Leaving space, with the path open',
         supports: [
           'A date on which you will decide whether to make the move yourself',
           'A good memory of this person, written in two lines',
@@ -904,7 +904,7 @@ export const PERSONAL = {
     roles: {
       a: 'Doubts show that you care. A small step and a review date make them useful travelling companions.',
       b: 'Having doubts and choosing to wait is a lucid choice, especially with a date to take stock.',
-      c: 'With a few doubts, the small trial is the most fitting door: it gives you facts in place of hypotheses.',
+      c: 'With a few doubts, the small trial is the most fitting path: it gives you facts in place of hypotheses.',
     },
     d1: 'Write the doubt in a single line: giving it a shape is a first way of getting to know it.',
     w1: 'Reread the doubt from a week ago and notice whether it has changed shape.',
@@ -924,7 +924,7 @@ export const PERSONAL = {
     label: 'budget',
     kw: /(money|savings?|salary|budget|mortgage|\brent\b|debts?|expenses|\bcosts?\b|afford|financial|\bloan\b)/i,
     roles: {
-      a: 'With the numbers in mind, a good anchor is setting a spending limit in advance and a date to redo the sums: financial calm is part of the door.',
+      a: 'With the numbers in mind, a good anchor is setting a spending limit in advance and a date to redo the sums: financial calm is part of the path.',
       b: 'Staying makes the numbers more predictable: a good moment to set aside a small cushion.',
       c: 'The small trial has a concrete advantage: it costs little and gives real numbers to decide on.',
     },
@@ -957,7 +957,7 @@ export const PERSONAL = {
     label: 'a dream',
     kw: /(dream\w*|passion|always wanted|\bwish\b|since i was)/i,
     roles: {
-      a: 'If it is a dream, the door already has the most important thing: direction. The rest is built one step at a time.',
+      a: 'If it is a dream, the path already has the most important thing: direction. The rest is built one step at a time.',
       b: 'A dream that waits stays a lit dream, if you give it a date and a small gesture of care.',
       c: 'Trying the dream on a small scale gives it a body: it is the gentlest way of finding out what it really wants.',
     },
@@ -975,8 +975,8 @@ export const PERSON_ROLES = {
 };
 export const PLACE_ROLES = {
   a: 'If the choice leads to {name}, already knowing three concrete things about the place (a street, a spot, a person) makes it feel familiar right away.',
-  b: 'Staying does not close {name}: that door is still there and you can reopen it whenever you wish.',
+  b: 'Staying does not close {name}: that path is still there and you can reopen it whenever you wish.',
   c: 'A small trial of {name}, even just a weekend, turns imagination into real memories.',
 };
 export const TIME_NOTE = 'This is the time you mentioned (“{label}”): a good moment to take stock.';
-export const FEAR_INTRO = 'You mentioned some doubts: it is a sign that you care. Here you will find doors made for crossing them, one step at a time.';
+export const FEAR_INTRO = 'You mentioned some doubts: it is a sign that you care. Here you will find paths made for crossing them, one step at a time.';
