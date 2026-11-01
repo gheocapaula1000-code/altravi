@@ -13,7 +13,7 @@ html{overscroll-behavior-y:contain;font-size:100%;-webkit-text-size-adjust:100%;
 html.big{font-size:125%}
 *{box-sizing:border-box}
 body{overscroll-behavior-y:contain;margin:0;min-height:100dvh;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:var(--fs);line-height:1.55;
-  display:flex;flex-direction:column;overflow-x:hidden;padding-bottom:calc(5.5rem + env(safe-area-inset-bottom))}
+  display:flex;flex-direction:column;overflow-x:hidden;padding-bottom:calc(7.5rem + env(safe-area-inset-bottom))}
 body::before{content:"";position:fixed;inset:0;z-index:-2;
   background:radial-gradient(120% 70% at 50% -10%,#1d2557 0%,#0b0f2a 42%,#05060f 100%),var(--bg)}
 .stars{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.9;
@@ -257,7 +257,7 @@ noscript{display:block;padding:2rem;text-align:center}
 .think-skip{margin-top:1.4rem}
 /* sipario con le tue parole */
 .reveal .panel{display:grid;place-items:center;padding:1rem}
-.reveal .ptxt{font-family:var(--serif);font-style:italic;font-size:clamp(1.1rem,4.4vw,2rem);color:#ffe2a8;text-align:center;max-width:90%;opacity:.95;transition:opacity .8s;overflow-wrap:anywhere}
+.reveal .ptxt{font-family:var(--serif);font-style:italic;font-size:clamp(1.1rem,4.4vw,2rem);color:#ffe2a8;text-align:center;max-width:90%;opacity:.95;transition:opacity .8s;overflow-wrap:break-word}
 .reveal.go .ptxt{opacity:0}
 /* personalizzazione */
 .fear-intro{font-family:var(--serif);font-size:1.15rem;color:#e6dcff;max-width:40rem;margin:.6rem auto;font-style:italic}
@@ -382,7 +382,7 @@ details.more .chips{margin-top:.4rem}
 .marks{display:grid;grid-template-columns:repeat(var(--n,2),1fr);gap:.5rem;margin-top:-.2rem}
 .mk{text-align:center;padding:.3rem .2rem}
 .mk-orb{display:block;width:1.1rem;height:1.1rem;margin:0 auto .3rem;border-radius:50%;background:var(--c);box-shadow:0 0 1.4rem .3rem var(--c);animation:pulse 3s ease-in-out infinite}
-.mk-feel{display:block;font-family:var(--serif);font-weight:600;font-size:clamp(1.5rem,6.4vw,2.3rem);line-height:1.1;color:var(--c);text-shadow:0 0 1.4rem color-mix(in srgb,var(--c) 55%,transparent);overflow-wrap:anywhere}
+.mk-feel{display:block;font-family:var(--serif);font-weight:600;font-size:clamp(1.35rem,calc(100cqi / var(--n,2) / 6.6),2.3rem);line-height:1.1;color:var(--c);text-shadow:0 0 1.4rem color-mix(in srgb,var(--c) 55%,transparent);overflow-wrap:normal;word-break:normal;hyphens:manual}
 .mk-name{display:block;margin-top:.15rem;font-size:.95rem;font-weight:700;color:var(--ink)}
 .mk-txt{margin:.3rem auto 0;color:var(--muted);font-size:.95rem;line-height:1.4;max-width:15rem}
 .spark{max-width:34rem;margin:.2rem auto 1rem;text-align:center;font-family:var(--serif);font-style:italic;font-size:1.12rem;color:#ffe2a8}
@@ -410,7 +410,7 @@ details.more .chips{margin-top:.4rem}
 
 /* consenso AI */
 .ai-consent{max-width:36rem;margin:1.2rem auto}
-.ai-sent{margin:.4rem 0 1.2rem;padding:.7rem .9rem;border-left:.2rem solid var(--teal,#2dd4bf);background:rgba(255,255,255,.04);border-radius:.4rem;font-family:var(--serif);font-size:1.1rem;overflow-wrap:anywhere}
+.ai-sent{margin:.4rem 0 1.2rem;padding:.7rem .9rem;border-left:.2rem solid var(--teal,#2dd4bf);background:rgba(255,255,255,.04);border-radius:.4rem;font-family:var(--serif);font-size:1.1rem;overflow-wrap:break-word}
 .ai-actions{flex-direction:column;align-items:stretch;gap:.6rem}
 .ai-actions .btn{width:100%}
 .linkbtn{background:none;border:0;padding:.6rem .2rem;color:inherit;text-decoration:underline;font:inherit;cursor:pointer;min-height:2.75rem}
@@ -459,3 +459,42 @@ details.more .chips{margin-top:.4rem}
 .ptr.snap{transition:transform .25s var(--ease),opacity .25s}
 @keyframes ptrspin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.ptr.busy svg{animation:none}}
+
+/* mai parole spezzate a metà: le parole vanno a capo solo tra una parola e l'altra; se manca spazio cambia la disposizione */
+html{scroll-padding-bottom:8rem}
+h1,h2,h3,p,li,span,b,strong,label,button,a,summary,.btn,.chip,.mk,.mk *{overflow-wrap:normal;word-break:normal;hyphens:manual}
+.url,.bk-sources .url,.ptxt,.ai-sent{overflow-wrap:break-word}
+.diverge{container-type:inline-size}
+/* di base i futuri sono righe (leggibili su telefono e con testo grande); si affiancano solo se c'è davvero spazio */
+.marks{display:grid;grid-template-columns:1fr;gap:.9rem;margin-top:.8rem}
+.mk{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:.9rem;align-items:start;text-align:start;padding:.7rem .9rem;border-radius:var(--r);background:var(--card);border:.0625rem solid var(--card-b);border-inline-start:.25rem solid var(--c)}
+.mk-orb{grid-row:1/span 3;margin:.55rem 0 0;width:.9rem;height:.9rem}
+.mk-feel,.mk-name,.mk-txt{grid-column:2}
+.mk-feel{font-size:clamp(1.4rem,6.4vw,2rem)}
+.mk-txt{max-width:none;margin:.3rem 0 0}
+@container (min-width:36rem){
+  .marks[style*="--n:3"],.marks[style*="--n: 3"]{grid-template-columns:repeat(3,minmax(0,1fr));gap:.6rem;margin-top:-.2rem}
+  .marks[style*="--n:3"] .mk,.marks[style*="--n: 3"] .mk{display:block;text-align:center;background:none;border:0;padding:.3rem .2rem}
+}
+@container (min-width:26rem){
+  .marks[style*="--n:2"],.marks[style*="--n: 2"]{grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem;margin-top:-.2rem}
+  .marks[style*="--n:2"] .mk,.marks[style*="--n: 2"] .mk{display:block;text-align:center;background:none;border:0;padding:.3rem .2rem}
+}
+@container (min-width:26rem){
+  .marks[style*="--n:2"] .mk-orb,.marks[style*="--n: 2"] .mk-orb{margin:0 auto .3rem;width:1.1rem;height:1.1rem}
+  .marks[style*="--n:2"] .mk-feel,.marks[style*="--n: 2"] .mk-feel{font-size:clamp(1.35rem,calc(100cqi / 2 / 6.6),2.3rem)}
+  .marks[style*="--n:2"] .mk-txt,.marks[style*="--n: 2"] .mk-txt{margin-inline:auto;max-width:15rem}
+}
+@container (min-width:36rem){
+  .marks[style*="--n:3"] .mk-orb,.marks[style*="--n: 3"] .mk-orb{margin:0 auto .3rem;width:1.1rem;height:1.1rem}
+  .marks[style*="--n:3"] .mk-feel,.marks[style*="--n: 3"] .mk-feel{font-size:clamp(1.35rem,calc(100cqi / 3 / 6.6),2.3rem)}
+  .marks[style*="--n:3"] .mk-txt,.marks[style*="--n: 3"] .mk-txt{margin-inline:auto;max-width:15rem}
+}
+/* testo grande e schermi stretti: gli elementi vanno a capo come blocchi interi, mai dentro una parola */
+.door-top{flex-wrap:wrap}
+.door-top > :nth-child(2){flex:1 1 9rem;min-width:0}
+.rec{margin-inline-start:0}
+.ticks{flex-wrap:wrap;row-gap:.2rem}
+.tick{flex:1 1 auto;padding:.2rem .55rem}
+.tabs a{min-width:0;font-size:min(.82rem,4vw)}
+.nb{white-space:nowrap}

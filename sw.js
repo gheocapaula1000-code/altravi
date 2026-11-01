@@ -1,5 +1,5 @@
 // Service worker: shell offline (cache-first) con aggiornamento in background.
-const VERSION = 'altravi-v4.4.0';
+const VERSION = 'altravi-v4.4.1';
 const SHELL = [
   './', 'index.html', 'privacy.html', 'termini.html', 'cookie.html', 'manifest.webmanifest',
   'css/app.css', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
