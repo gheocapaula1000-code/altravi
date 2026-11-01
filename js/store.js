@@ -7,7 +7,7 @@ try { if (typeof localStorage !== 'undefined' && !localStorage.getItem(KEY) && l
 const blank = () => ({
   v: 1,
   createdAt: Date.now(),
-  settings: { bigText: false, resonanceOptIn: false, demoOffsetDays: 0 },
+  settings: { bigText: false, resonanceOptIn: false, demoOffsetDays: 0, aiConsent: null },
   lines: [],
   draft: null,
   seen: {},        // capitoli già visti: "lineId:horizon"

@@ -9,9 +9,10 @@ export const BANNED_IT = /\b(fallimento|fallire|fallirai|falliment\w*|disastr\w*
 export const BANNED_EN = /\b(fail|fails|failed|failing|failure|failures|disaster\w*|catastroph\w*|blame\w*|your fault|regret\w*|danger\w*|dangerous|risk|risks|risky|wrong|worst|terrible|lose everything|ruin\w*|fiasco|dramatic|tragic\w*|doomed|despair\w*|hopeless|useless)\b/i;
 export const BANNED = new RegExp(`${BANNED_IT.source}|${BANNED_EN.source}`, 'i');
 // Linguaggio deterministico vietato: mai promettere né predire.
-export const DETERMINISTIC_IT = /\b(accadr[àa]|succeder[àa]|sicuramente|di certo|garantit\w*|certamente|senza dubbio)\b/i;
+// NB: \b non funziona dopo una lettera accentata ("accadrà"): si usano lookaround Unicode.
+export const DETERMINISTIC_IT = /(?<![\p{L}])(accadr[àa]|succeder[àa]|sicuramente|di certo|garantit\w*|certamente|senza dubbio)(?![\p{L}])/iu;
 export const DETERMINISTIC_EN = /\b(will definitely|will certainly|will surely|definitely|certainly|surely|guarantee[ds]?|guaranteed|without a doubt|for sure|is bound to|will always)\b/i;
-export const DETERMINISTIC = new RegExp(`${DETERMINISTIC_IT.source}|${DETERMINISTIC_EN.source}`, 'i');
+export const DETERMINISTIC = new RegExp(`${DETERMINISTIC_IT.source}|${DETERMINISTIC_EN.source}`, 'iu');
 
 const REQUIRED_HORIZONS = HORIZONS.map(h => h.key);
 const DAILY_HORIZONS_KEYS = ['h1', 'sera', 'dom'];

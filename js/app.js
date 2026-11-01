@@ -1,7 +1,8 @@
 import { t, getLang, setLang, onLang, locale, LANGS, LANG_NAMES, region } from './i18n/index.js';
 import { store, DAY_MS } from './store.js';
-import { generateForks, detectCrisis, forkSetFor, preview, nextAdvice, isDaily, dailyHorizons, DAILY_CATS, dailyExample, dailyColor } from './engine/index.js';
+import { generateForks, generateForksSmart, aiEligible, classifyText, detectCrisis, forkSetFor, preview, nextAdvice, isDaily, dailyHorizons, DAILY_CATS, dailyExample, dailyColor } from './engine/index.js';
 import { dailySign, checkinText } from './engine/advice.js';
+import { AI } from './config.js';
 import { content, evidence, HORIZONS, rankEvidence } from './content/index.js';
 import { moonPhase, coincidencesFor, coincidencesAll, fmtDate, fmtTime, fmtDay, fmtShort, fmtOn } from './signals.js';
 import { h, svg, FORK_COLORS, humanize, remainingMs, evBadge, showEvidence, shortSource, downloadICS, prefersReduced, sleep } from './ui.js';
@@ -92,24 +93,21 @@ function viewAsk(query) {
   });
   const big = Object.entries(C().CATEGORIES).filter(([id]) => id !== 'altro').map(([id, c]) =>
     h('button', { class: 'chip', type: 'button', style: `--c:${c.color}`, onclick: () => { ta.value = c.example; err.textContent = ''; ta.focus(); } }, h('i', { 'aria-hidden': 'true' }), c.label));
-  // la linea di luce che si divide in due: si allarga mentre scrivi
-  const A = '#ffb84d', B = '#4fd1c5';
-  const hp = (x) => `M100 0 L100 14 C100 44 ${x.toFixed(1)} 40 ${x.toFixed(1)} 78`;
-  const hA = svg('path', { d: hp(100), stroke: A, style: `color:${A}` }), hB = svg('path', { d: hp(100), stroke: B, style: `color:${B}` });
-  const dA = svg('circle', { cx: 100, cy: 78, r: 2.6, fill: A, style: `color:${A}` }), dB = svg('circle', { cx: 100, cy: 78, r: 2.6, fill: B, style: `color:${B}` });
-  const splitSvg = svg('svg', { class: 'hero-split', viewBox: '0 0 200 84', 'aria-hidden': 'true', preserveAspectRatio: 'xMidYMid meet' }, hA, hB, dA, dB);
-  const setSplit = (p) => {
-    const x = 100 - (10 + 62 * p), y = 100 + (10 + 62 * p);
-    hA.setAttribute('d', hp(x)); hB.setAttribute('d', hp(y));
-    dA.setAttribute('cx', x.toFixed(1)); dB.setAttribute('cx', y.toFixed(1));
-  };
-  setSplit(0.15);
-  requestAnimationFrame(() => setSplit(0.15));
-  ta.addEventListener('input', () => setSplit(Math.min(1, 0.15 + ta.value.length / 38)));
+  // il battito d'ali: due ali = due strade (ambra e verde acqua), disegnate come linee di luce; si accendono mentre scrivi
+  const wing = (sx, col, cls) => svg('g', sx < 0 ? { transform: 'translate(200 0) scale(-1 1)' } : {}, svg('g', { class: 'wing ' + cls, style: `color:${col}` },
+    svg('path', { d: 'M99 40 C 90 12, 52 2, 31 14 C 18 23, 34 44, 99 45', stroke: col }),
+    svg('path', { d: 'M99 47 C 80 49, 56 60, 62 73 C 69 82, 92 68, 99 52', stroke: col }),
+    svg('path', { d: 'M99 41 C 80 28, 58 22, 44 26', stroke: col, class: 'vein' })));
+  const splitSvg = svg('svg', { class: 'hero-split wings', viewBox: '0 0 200 88', 'aria-hidden': 'true', focusable: 'false', preserveAspectRatio: 'xMidYMid meet' },
+    wing(1, '#ffb84d', 'wl'), wing(-1, '#4fd1c5', 'wr'),
+    svg('path', { d: 'M100 32 L100 66', stroke: '#f3eefc', class: 'body' }),
+    svg('path', { d: 'M100 32 C 98 24, 94 20, 90 18 M100 32 C 102 24, 106 20, 110 18', stroke: '#f3eefc', class: 'vein' }));
+  ta.addEventListener('input', () => splitSvg.classList.toggle('awake', ta.value.length > 0));
   mount(h('section', { class: 'hero' },
     splitSvg,
     from ? h('p', { class: 'kicker' }, t('ask.from', { title: chosenFork(from).title })) : h('p', { class: 'kicker' }, t('ask.kicker')),
-    h('h1', null, t('ask.title')),
+    from ? h('h1', null, t('ask.title')) : h('h1', { class: 'quote' }, h('span', { class: 'q1' }, t('ask.quote1')), ' ', h('span', { class: 'q2' }, t('ask.quote2'))),
+    from ? null : h('h2', { class: 'ask-q' }, t('ask.title')),
     h('p', { class: 'lead', id: 'askhint' }, t('ask.hint')),
     ta, err,
     h('div', { class: 'row' },
@@ -123,6 +121,27 @@ function viewAsk(query) {
   if (!prefersReduced() && !quiet) setTimeout(() => { if (document.activeElement === document.body || document.activeElement === view || view.contains(document.activeElement)) ta.focus({ preventScroll: true }); }, 700);
 }
 
+/** Consenso esplicito prima che il testo lasci il telefono: mostra ESATTAMENTE cosa verrebbe inviato. */
+function askAiConsent(text) {
+  return new Promise(resolve => {
+    const done = v => resolve(v);
+    const first = h('button', { class: 'btn primary big', type: 'button', id: 'aiOnce', onclick: () => done('once') }, t('ai.ask.once'));
+    mount(h('section', { class: 'card ai-consent', 'aria-labelledby': 'aiT' },
+      h('p', { class: 'kicker' }, t('ask.kicker')),
+      h('h1', { id: 'aiT' }, t('ai.ask.title')),
+      h('p', { class: 'lead' }, t('ai.ask.body')),
+      h('p', { class: 'muted small' }, t('ai.ask.sent')),
+      h('blockquote', { class: 'ai-sent' }, text.trim()),
+      h('div', { class: 'row ai-actions' },
+        first,
+        h('button', { class: 'btn', type: 'button', id: 'aiAlways', onclick: () => done('always') }, t('ai.ask.always')),
+        h('button', { class: 'btn', type: 'button', id: 'aiLocal', onclick: () => done('local') }, t('ai.ask.local'))),
+      h('p', { class: 'promise' }, t('ai.ask.promise')),
+      h('p', { class: 'muted small' }, h('button', { class: 'linkbtn', type: 'button', id: 'aiNever', onclick: () => done('never') }, t('ai.ask.never')), ' · ', h('a', { href: 'privacy.html' }, t('ai.ask.privacy')))));
+    setTimeout(() => first.focus({ preventScroll: true }), 50);
+  });
+}
+
 /* ───────── vista: pensa (le tue parole entrano nella luce, poi la linea si divide) ───────── */
 async function viewThink() {
   if (!pendingText) { go('#/nuovo'); return; }
@@ -134,7 +153,19 @@ async function viewThink() {
   const finish = async () => {
     if (done) return; done = true; clearTimeout(timer);
     try {
-      const fs = await generateForks({ text: job.text });
+      // Consiglio AI di riserva: SOLO se il motore locale non riconosce la domanda, l'AI è attiva e l'utente acconsente (esplicitamente).
+      let useAI = false;
+      if (!detectCrisis(job.text) && aiEligible(job.text, classifyText(job.text))) {
+        const c = store.state.settings.aiConsent;
+        if (c === 'always') useAI = true;
+        else if (c !== 'never') {
+          const ch = await askAiConsent(job.text);
+          if (ch === 'always' || ch === 'never') store.setSetting('aiConsent', ch);
+          useAI = ch === 'once' || ch === 'always';
+        }
+        if (useAI) mount(h('section', { class: 'think' }, h('div', { class: 'think-in' }, h('div', { class: 'lightline', 'aria-hidden': 'true' }), h('p', { class: 'think-live', role: 'status' }, t('ai.wait')))));
+      }
+      const fs = await generateForksSmart({ text: job.text }, { useAI });
       store.setDraft(fs, job.parent);
       pendingText = null;
       go('#/porte');
@@ -752,8 +783,19 @@ function viewSettings() {
       h('section', { class: 'card', 'aria-labelledby': 's5' }, h('h2', { id: 's5' }, t('set.install')),
         deferredInstall ? h('button', { class: 'btn primary', type: 'button', onclick: async () => { deferredInstall.prompt(); deferredInstall = null; route(); } }, t('set.install'))
           : h('p', { class: 'muted' }, isIOS ? t('set.install.ios') : t('set.install.generic'))),
-      h('section', { class: 'card', 'aria-labelledby': 's6' }, h('h2', { id: 's6' }, t('set.engine')), h('p', { class: 'muted' }, t('set.engine.val'))),
+      AI.enabled ? aiSettingsCard() : null,
+      h('section', { class: 'card', 'aria-labelledby': 's6' }, h('h2', { id: 's6' }, t('set.engine')), h('p', { class: 'muted' }, AI.enabled ? t('ai.engine.val') : t('set.engine.val'))),
     ));
+}
+
+function aiSettingsCard() {
+  const cur = store.state.settings.aiConsent;
+  const names = { null: t('ai.set.ask'), always: t('ai.set.always'), never: t('ai.set.never') };
+  const opt = (val, id) => h('button', { class: 'btn' + (cur === val ? ' primary' : ''), type: 'button', id, 'aria-pressed': String(cur === val), onclick: () => { store.setSetting('aiConsent', val); route(); } }, names[val]);
+  return h('section', { class: 'card', 'aria-labelledby': 's7' }, h('h2', { id: 's7' }, t('ai.set.title')), h('p', { class: 'muted' }, t('ai.set.body')),
+    h('p', { class: 'muted small', role: 'status' }, t('ai.set.now') + names[cur === 'always' || cur === 'never' ? cur : null]),
+    h('div', { class: 'row' }, opt(null, 'aiSetAsk'), opt('always', 'aiSetAlways'), opt('never', 'aiSetNever')),
+    h('p', { class: 'muted small ai-link' }, h('a', { href: 'privacy.html' }, t('ai.ask.privacy'))));
 }
 
 /* ───────── router ───────── */

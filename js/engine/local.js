@@ -1,4 +1,5 @@
 // Motore locale a template: contenuti curati + fonti verificate (js/content/{it,en}.js) + comprensione della domanda.
+import { nextAiAdvice } from './ai.js';
 import { CONTENT, content, HORIZONS } from '../content/index.js';
 import { getLang, contentLang } from '../i18n/index.js';
 import { CRISIS_EXTRA } from '../content/safety.js';
@@ -145,6 +146,7 @@ export function localizeForkSet(fs, lang = getLang()) {
 
 /** Un altro consiglio per la stessa domanda (stesse porte): ricostruisce il ForkSet con la variante successiva. */
 export function nextAdvice(fs) {
+  if (fs.engine === 'ai') return nextAiAdvice(fs);
   const t = { a: null, b: null };
   for (const f of fs.forks) if (f.fromUser && (f.id === 'a' || f.id === 'b')) t[f.id] = f.title;
   const variant = ((fs.advice && fs.advice.variant) || 0) + 1;

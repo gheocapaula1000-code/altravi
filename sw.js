@@ -1,11 +1,11 @@
 // Service worker: shell offline (cache-first) con aggiornamento in background.
-const VERSION = 'altravi-v4.0.0';
+const VERSION = 'altravi-v4.2.0';
 const SHELL = [
   './', 'index.html', 'privacy.html', 'termini.html', 'cookie.html', 'manifest.webmanifest',
   'css/app.css', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
   'js/app.js', 'js/store.js', 'js/signals.js', 'js/ui.js', 'js/lang-boot.js', 'js/legal.js',
   'js/i18n/index.js', 'js/i18n/it.js', 'js/i18n/en.js', 'js/content/safety.js', 'js/content/daily-core.js', 'js/content/daily-it.js', 'js/content/daily-en.js', 'js/content/more-core.js', 'js/content/more-it.js', 'js/content/more-en.js', 'js/engine/advice.js',
-  'js/content/index.js', 'js/content/it.js', 'js/content/en.js', 'js/engine/understand.js', 'js/engine/index.js', 'js/engine/local.js', 'js/engine/guard.js',
+  'js/content/index.js', 'js/content/it.js', 'js/content/en.js', 'js/engine/understand.js', 'js/engine/index.js', 'js/engine/local.js', 'js/engine/guard.js', 'js/engine/ai.js', 'js/config.js',
 ];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

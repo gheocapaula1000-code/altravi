@@ -407,3 +407,37 @@ details.more .chips{margin-top:.4rem}
 .rings-legend{display:flex;flex-wrap:wrap;gap:.5rem 1rem;justify-content:center;margin:0 0 1.2rem}
 .reduce .hero-split path,.reduce .hero-split circle,.reduce .rings i,.reduce .mk-orb,.reduce .sky circle{animation:none;stroke-dashoffset:0}
 @media (prefers-reduced-motion:reduce){.hero-split path,.hero-split circle,.rings i,.mk-orb,.sky circle{animation:none;stroke-dashoffset:0}}
+
+/* consenso AI */
+.ai-consent{max-width:36rem;margin:1.2rem auto}
+.ai-sent{margin:.4rem 0 1.2rem;padding:.7rem .9rem;border-left:.2rem solid var(--teal,#2dd4bf);background:rgba(255,255,255,.04);border-radius:.4rem;font-family:var(--serif);font-size:1.1rem;overflow-wrap:anywhere}
+.ai-actions{flex-direction:column;align-items:stretch;gap:.6rem}
+.ai-actions .btn{width:100%}
+.linkbtn{background:none;border:0;padding:.6rem .2rem;color:inherit;text-decoration:underline;font:inherit;cursor:pointer;min-height:2.75rem}
+.ai-link a,.ai-consent .small a{display:inline-block;padding:.7rem .3rem;min-height:2.75rem;box-sizing:border-box}
+
+/* ───── v4.1: frase d'apertura + ali (due strade) ───── */
+.hero-split.wings{width:min(10.5rem,52%);margin:0 auto .5rem}
+.wings path{fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 3px currentColor);stroke-dasharray:220;stroke-dashoffset:220;animation:draw 2.2s var(--ease) .1s forwards;opacity:.9}
+.wings .vein{stroke-width:1;opacity:.5}
+.wings .body{stroke-width:1.8;filter:none;opacity:.8}
+.wings .wing{transform-box:fill-box;transform-origin:50% 50%;animation:flutter 7s ease-in-out 2.4s infinite}
+.wings.awake .wing path{opacity:1;filter:drop-shadow(0 0 6px currentColor)}
+@keyframes flutter{0%,86%,100%{transform:scale(1)}92%{transform:scale(.94,1)}}
+.reduce .wings .wing,.reduce .wings path{animation:none;stroke-dashoffset:0}
+@media (prefers-reduced-motion:reduce){.wings .wing,.wings path{animation:none;stroke-dashoffset:0}}
+.hero h1.quote{font-size:clamp(1.65rem,7.2vw,2.5rem);line-height:1.14;margin:.2rem auto .7rem;max-width:30rem;font-weight:400;text-wrap:balance;text-shadow:none}
+.hero h1.quote .q1{display:block;color:var(--muted,#b9b2cf);font-size:.82em;margin-bottom:.3rem}
+.hero h1.quote .q2{display:block;background:linear-gradient(90deg,var(--amber),#f3eefc 55%,var(--teal));-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;text-shadow:none;filter:drop-shadow(0 0 1.4rem rgba(255,184,77,.22))}
+.hero h2.ask-q{text-align:center;font-family:var(--sans,inherit);font-size:1.05rem;font-weight:700;letter-spacing:.01em;margin:.3rem 0 .15rem}
+.hero .lead{font-size:.98rem;margin-bottom:.7rem}
+.hero .kicker{margin:.1rem 0 .1rem;font-size:.72rem}
+.hero h1.quote{font-size:clamp(1.75rem,7.6vw,2.6rem);margin-bottom:.8rem}
+.hero h1.quote .q1{color:#e8e3f6;font-size:.9em;margin-bottom:.35rem}
+.hero .field{min-height:4.4rem}
+.hero .promise{margin:.5rem 0 .2rem}
+.hero-split.wings{width:min(8.6rem,46%);margin-bottom:.35rem}
+.hero .field{min-height:3.7rem}
+.hero .row{margin-top:.1rem}
+@media (max-height:900px){.hero .lead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;margin:0}}
+.hero h2.ask-q{margin:.4rem 0 .55rem}
