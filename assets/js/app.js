@@ -2,6 +2,8 @@
 import { t, getLang, setLang, onLang, tx } from './i18n.js';
 import * as S from './store.js';
 import * as V from './views.js';
+import * as A from './views-account.js';
+import * as Cloud from './cloud.js';
 import { decode } from './share.js';
 import { initPWA, setSoftRefresh } from './pwa.js';
 import { icon, toast, html, undoBar, hideUndo } from './ui.js';
@@ -11,7 +13,10 @@ const tabsEl = document.getElementById('tabs');
 let token = 0, lastName = '';
 
 const go = p => { const h = '#' + p; if (location.hash === h) render(); else location.hash = h; };
-V.env.go = go; V.env.rerender = () => render(true);
+// «replace»: sostituisce la voce della cronologia (usato dopo l'accesso, così «indietro» non rimanda al link monouso)
+const replace = p => { history.replaceState(null, '', '#' + p); render(); };
+V.env.go = go; V.env.replace = replace; V.env.rerender = () => render(true);
+S.setAccessProvider(Cloud.access);
 
 function parse() {
   const raw = location.hash.slice(1) || '/';
@@ -21,14 +26,30 @@ function parse() {
 }
 const N = x => Math.max(1, parseInt(x, 10) || 1);
 
+const WRITE = [/^\/nuovo\//, /^\/i\/(?!demo\/)[\w-]+\/(attesa|decisione|tappa|modifica|elimina)\//, /^\/i\/(?!demo\/)[\w-]+\/m\/[\w-]+\/v\//];
 async function resolve({ path, query }) {
   let m;
+  if (Cloud.signedIn() && S.readOnly() && WRITE.some(r => r.test(path))) return { redirect: '/in-pausa' };
+  if (!Cloud.signedIn() && /^\/nuovo\//.test(path)) return { redirect: '/prova' };
   if (path === '/') return V.landing();
   if (path === '/demo') { S.seedDemo(); return { redirect: '/i/demo' }; }
   if (path === '/progetti') return V.projects();
   if (path === '/prezzi') return V.pricing();
-  if ((m = path.match(/^\/prova\/(\w+)\/fatto$/))) return V.trialDone(m[1]);
-  if ((m = path.match(/^\/prova\/(\w+)(?:\/(\d+))?$/))) return V.trialStart(m[1], N(m[2]));
+  if (path === '/prova') return A.emailStep('try', '');
+  if ((m = path.match(/^\/prova\/(start|team|studio)$/))) return A.emailStep('try', m[1]);
+  if (path === '/accedi') return A.emailStep('in', '');
+  if (path === '/codice') return A.codeStep();
+  if ((m = path.match(/^\/entra\/([\w-]+)$/))) return A.enter(m[1]);
+  if (path === '/benvenuto') return A.welcome();
+  if (path === '/importa') return A.importJobs();
+  if (path === '/abbonamento') return A.subscription();
+  if (path === '/abbonamento/ok') return A.payOk();
+  if (path === '/abbonamento/annullato') return A.payCancel();
+  if ((m = path.match(/^\/abbonamento\/conferma\/(\w+)\/(\w+)$/))) return A.confirm(m[1], m[2]);
+  if (path === '/in-pausa') return A.paused();
+  if (path === '/clienti-piano') return A.clientsLocked();
+  if (path === '/invita') return A.invitePerson();
+  if ((m = path.match(/^\/v\/([\w-]+)$/))) return A.clientEntry(m[1]);
   if (path === '/impostazioni') return V.settings();
   if (path === '/email') return V.emails();
   if (path === '/nota') return V.nota();
@@ -101,6 +122,7 @@ async function render(soft = false) {
   V.wiz.active = v.active || null;
   paintTabs(v);
   paintChrome();
+  paintAcct(v);
   if (v.bind) v.bind(main);
   V.env.lastView = v.name; lastName = v.name;
   document.body.dataset.rendered = String(my);
@@ -127,6 +149,33 @@ function paintChrome() {
   tabsEl.setAttribute('aria-label', t('nav.aria'));
 }
 
+/* ───────── fascia di stato dell'abbonamento ───────── */
+const ACCT_VIEWS = new Set(['projects', 'summary', 'expectations', 'decisions', 'history', 'milestone', 'settings']);
+function paintAcct(v) {
+  const el = document.getElementById('acct'); if (!el) return;
+  const a = Cloud.signedIn() ? Cloud.access() : null;
+  if (!a || a.admin || !ACCT_VIEWS.has(v ? v.name : document.body.dataset.view) || document.body.classList.contains('client') || a.status === 'active') { el.hidden = true; el.className = 'acct'; return; }
+  let msg, link, warn = false;
+  if (a.status === 'trial') { msg = a.daysLeft > 1 ? t('ac.st.trial', { n: a.daysLeft }) : a.daysLeft === 1 ? t('ac.st.trial.one') : t('ac.st.trial.last'); link = t('ac.bar.choose'); warn = a.daysLeft <= 3; }
+  else if (a.status === 'paused') { msg = t('ac.st.paused'); link = t('ac.bar.resume'); warn = true; }
+  else { msg = t('ac.st.past'); link = t('ac.bar.check'); warn = true; }
+  el.className = 'acct' + (warn ? ' warn' : '');
+  el.innerHTML = `<span class="acct-t"></span><a class="btn quiet" href="#/abbonamento"></a>`;
+  el.firstChild.textContent = msg; el.lastChild.textContent = link; el.hidden = false;
+}
+
+/** Ridisegna dopo un allineamento solo se non si sta scrivendo. */
+function afterRemote() {
+  const ae = document.activeElement;
+  const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT');
+  if (V.wiz.active || typing || document.body.dataset.ptr === 'off') return;
+  render(true);
+}
+function paintSync() {
+  const n = document.getElementById('syncLine'); if (n) n.textContent = Cloud.syncText();
+  paintAcct(null);
+}
+
 function boot() {
   const sel = document.getElementById('langSel');
   sel.innerHTML = '<option value="it">IT</option><option value="en">EN</option>';
@@ -139,7 +188,9 @@ function boot() {
   onLang(() => render(true));
   window.addEventListener('hashchange', () => { if (!/^#\/prezzi/.test(location.hash)) V.resetBilling(); render(); });
   window.addEventListener('storage', e => { if (e.key === 'altravi.team.v1') { S.reload(); render(true); } });
-  setSoftRefresh(async () => { S.reload(); await render(true); });
+  setSoftRefresh(async () => { S.reload(); if (Cloud.signedIn()) { await Cloud.syncNow(); await Cloud.refreshMe(); } await render(true); });
+  Cloud.onCloud(paintSync); Cloud.onRemote(afterRemote);
+  Cloud.init();
   initPWA();
   render();
 }

@@ -299,3 +299,17 @@ html[lang=it] body.lp [data-l=en],html:not([lang=it]) body.lp [data-l=it]{displa
 .num.ok .ic{width:1.5rem;height:1.5rem}
 body:has(#undo) .toast{bottom:calc(10.2rem + env(safe-area-inset-bottom))}
 .actions.col>.btn,.actions.col .btn.primary{flex:0 0 auto}
+
+/* ───── v1.2: account, prova, abbonamento ───── */
+.acct{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.4rem .9rem;max-width:var(--max);width:calc(100% - 2*var(--pad));margin:.3rem auto 0;padding:.5rem .6rem .5rem 1rem;border-radius:var(--r);background:var(--card);border:.0625rem solid var(--line);font-weight:700}
+.acct.warn{border-color:var(--partly);background:rgba(255,200,87,.1)}
+.acct-t{flex:1 1 11rem;min-width:0}
+.acct .btn{min-height:2.9rem;padding:.4rem 1.1rem;font-size:1rem}
+.addr{display:block;font-weight:700;overflow-wrap:anywhere;word-break:normal}
+.field.code{text-align:center;font-size:clamp(1.8rem,9vw,2.4rem);letter-spacing:.35em;font-variant-numeric:tabular-nums;padding-inline-start:calc(1rem + .35em)}
+.field.code::placeholder{letter-spacing:.2em}
+.spin{width:2.6rem;height:2.6rem;border-radius:50%;border:.28rem solid var(--line);border-top-color:var(--client);animation:spin 1s linear infinite;margin:1rem 0}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:3s}}
+.card.next.warn{border-color:var(--partly)}
+.usage.sync{font-size:.9rem;color:var(--faint)}

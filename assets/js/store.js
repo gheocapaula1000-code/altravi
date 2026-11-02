@@ -4,7 +4,7 @@
 //   decisions:[{id,what,why,who,alt,date,createdAt,from}],
 //   milestones:[{id,name,date,expIds,token,team:{ratings,at}|null,client:{ratings,at,by}|null}] }] }
 import { demoEngagement, demoPeople } from './demo.js';
-import { PLANS, TRIAL_DAYS } from './plans.js';
+import { PLANS } from './plans.js';
 import { tx } from './i18n.js';
 
 const KEY = 'altravi.team.v1';
@@ -63,22 +63,20 @@ export function setClientCheck(e, m, ratings, by) { m.client = { ratings, at: Da
 export function shareToken(m) { if (!m.token) { m.token = token(); save(); } return m.token; }
 
 /* ───────── piano, prova, persone ───────── */
-export const trial = () => S.workspace.trial;
-export function trialDaysLeft() {
-  const tr = S.workspace.trial; if (!tr) return null;
-  return Math.ceil((tr.endsAt - Date.now()) / 86400000);
-}
-export const trialActive = () => { const n = trialDaysLeft(); return n != null && n > 0; };
-/** Piano in uso: quello della prova finché dura, altrimenti Start (la demo gira con i limiti di Start). */
-export const currentPlan = () => (trialActive() ? S.workspace.trial.plan : 'start');
-export function startTrial(plan, email, extra = {}) {
-  const c = v => String(v || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 120);
-  S.workspace.trial = { plan, email: String(email).trim(), team: c(extra.team), size: c(extra.size), role: c(extra.role), billing: extra.billing === 'annual' ? 'annual' : 'monthly', startedAt: Date.now(), endsAt: Date.now() + TRIAL_DAYS * 86400000 };
-  if (!S.workspace.name && S.workspace.trial.team) S.workspace.name = S.workspace.trial.team.slice(0, 80);
-  save();
-}
+// L'accesso (prova, piano, pausa) arriva dal servizio tramite cloud.js; qui solo una finestra su di esso, per evitare import circolari.
+let accessFn = () => null;
+export const setAccessProvider = f => { accessFn = f; };
+export const access = () => accessFn();
+export const trialDaysLeft = () => { const a = accessFn(); return a && a.status === 'trial' ? a.daysLeft : null; };
+/** Piano in uso: quello dell'abbonamento, Team durante la prova, Start senza account (incarichi già presenti su questo dispositivo). */
+export const currentPlan = () => { const a = accessFn(); return a ? (a.accessPlan || a.plan || 'start') : 'start'; };
+export const readOnly = () => { const a = accessFn(); return !!(a && a.readOnly); };
 export const activeEngagements = () => S.engagements.filter(e => !e.closedAt);
-export const jobLimitReached = () => activeEngagements().length >= PLANS[currentPlan()].jobs;
+export const jobLimitReached = () => {
+  const a = accessFn(), n = activeEngagements().length;
+  if (a) return a.readOnly || (a.limits.jobs != null && n >= a.limits.jobs);
+  return n >= PLANS.start.jobs;
+};
 export const people = () => S.workspace.people;
 export const userLimitReached = () => S.workspace.people.length >= PLANS[currentPlan()].users;
 export function addPerson({ name, role }) { S.workspace.people.push({ id: uid(), name: name.trim(), role: (role || '').trim() }); save(); }

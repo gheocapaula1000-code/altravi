@@ -6,8 +6,10 @@ import * as M from './model.js';
 import { PLANS, ORDER, annual, annualFull, TRIAL_DAYS, CONTACT } from './plans.js';
 import { email as mail, mailto, IDS as EMAIL_IDS } from './emails.js';
 import { linkFor, shareOrCopy } from './share.js';
+import * as Cloud from './cloud.js';
+import { accountCards, bindAccount } from './views-account.js';
 
-export const env = { go: () => {}, rerender: () => {}, flash: '' };
+export const env = { go: () => {}, replace: () => {}, rerender: () => {}, flash: '' };
 const go = p => env.go(p);
 const planName = id => t('pr.' + id);
 const money = n => new Intl.NumberFormat(getLang() === 'it' ? 'it-IT' : 'en-GB', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0, useGrouping: 'always' }).format(n);
@@ -30,7 +32,10 @@ export function landing() {
   <h1>${t('ld.h1')}</h1>
   <p class="lead">${t('ld.lead')}</p>
   <div class="hero-cta">
-    <a class="btn primary big" id="demoGo" href="#/demo">${t('ld.cta')}</a>
+    ${Cloud.signedIn()
+      ? html`<a class="btn primary big" id="openGo" href="#/progetti">${t('ld.cta.in')}</a>`
+      : html`<a class="btn primary big" id="trialGo" href="#/prova">${t('ld.cta')}</a>`}
+    <a class="btn" id="demoGo" href="#/demo">${t('ld.cta2')}</a>
     <p class="small muted">${t('ld.demo.hint')}</p>
     <p class="small promise">${t('ld.promise')}</p>
     <p class="small links">
@@ -73,12 +78,11 @@ export function landing() {
 /* ───────── lista incarichi ───────── */
 let gq = '';
 function usageLine() {
-  const p = S.currentPlan(), pl = PLANS[p], n = S.activeEngagements().length;
-  const a = pl.jobs === Infinity ? t('lim.jobs.unl', { n, plan: planName(p) }) : t('lim.jobs', { n, max: pl.jobs, plan: planName(p) });
-  const d = S.trialDaysLeft();
-  let tr = '';
-  if (S.trial()) tr = d > 1 ? t('tr.status', { plan: planName(S.trial().plan), n: d }) : d === 1 ? t('tr.status.one', { plan: planName(S.trial().plan) }) : d === 0 ? t('tr.status.last', { plan: planName(S.trial().plan) }) : t('tr.ended');
-  return html`<p class="usage">${a}</p>${tr ? html`<p class="usage trial">${tr}</p>` : ''}`;
+  const a = S.access(), p = S.currentPlan(), pl = PLANS[p], n = S.activeEngagements().length;
+  const unl = a ? a.limits.jobs == null : pl.jobs === Infinity;
+  const one = n === 1 ? '.one' : '';
+  const line = a && a.status === 'trial' ? t('lim.jobs.plain' + one, { n }) : unl ? t('lim.jobs.unl' + one, { n, plan: planName(p) }) : t('lim.jobs', { n, max: a ? a.limits.jobs : pl.jobs, plan: planName(p) });
+  return html`<p class="usage">${line}</p>${Cloud.signedIn() ? html`<p class="usage sync" id="syncLine" aria-live="polite">${Cloud.syncText()}</p>` : ''}`;
 }
 function projCard(e) {
   const sc = M.engagementScore(e), ns = M.nextStep(e);
@@ -192,7 +196,7 @@ ${e.closedAt ? html`<p class="small muted">${t('sm.closed', { d: fmtTs(e.closedA
 ${peopleCard(e)}`,
     bind(root) {
       const b = $(root, '#closeEng');
-      if (b) b.addEventListener('click', () => { S.closeEngagement(e); env.rerender(); });
+      if (b) b.addEventListener('click', () => { if (S.readOnly()) { go('/in-pausa'); return; } S.closeEngagement(e); env.rerender(); });
     },
   };
 }
@@ -227,7 +231,7 @@ ${rv ? html`<p class="notice">${t('rv.status', { d: fmtTs(rv.at) })}${tx(rv.note
   ${shareBox()}
 </section>`,
     bind(root) {
-      bindShare(root, '#inv', async () => linkFor('c', reviewSnap(e)), () => {
+      bindShare(root, '#inv', () => shareUrl(e, null, () => reviewSnap(e)), () => {
         const sn = reviewSnap(e);
         return { title: t('rv.invite'), mail: mail('invite', getLang(), { team: sn.w, client: sn.c, contact: ((e.contacts || [])[0] ? tx(e.contacts[0].name) : ''), sender: sender(), job: sn.ti, link: '{LINK}' }) };
       }, '#invMail');
@@ -311,13 +315,21 @@ ${crumb('/i/' + id, tx(e.title))}
 
 /* ───────── condivisione ───────── */
 const shareBox = () => html`<div class="sharebox" hidden><label class="small muted" for="sbl">${t('ms.link.label')}</label><textarea class="field" id="sbl" rows="3" readonly></textarea><button class="btn quiet" type="button" id="sbc">${t('copy')}</button></div>`;
+const errMsg = c => { const k = 'ac.err.' + c; const x = t(k); return x === k ? t('ac.err.SERVER') : x; };
+/** Con un account il link cliente vive sul servizio (breve, revocabile); senza account resta il link con i dati dentro. */
+const shareUrl = (e, mid, snapFn) => (Cloud.signedIn() && !e.demo ? Cloud.clientLink(e, mid) : linkFor('c', snapFn()));
 function bindShare(root, sel, build, meta, mailSel) {
   const btn = $(root, sel); if (!btn) return;
   const box = root.querySelector('.sharebox');
   const run = async mode => {
     btn.disabled = true;
     try {
-      const url = await build();
+      let url;
+      try { url = await build(); } catch (err) {
+        if (err && err.code === 'PLAN_NO_CLIENTS') { go('/clienti-piano'); return; }
+        if (err && err.code === 'PAUSED') { go('/in-pausa'); return; }
+        toast(errMsg(err && err.code)); return;
+      }
       box.hidden = false; $(box, '#sbl').value = url;
       const m = meta();
       if (mode === 'mail') {
@@ -376,7 +388,7 @@ ${priv}${list}`,
     bind(root) {
       const sn = () => msSnap(e, m);
       const first = e.contacts && e.contacts[0] ? tx(e.contacts[0].name) : '';
-      bindShare(root, '#sendC', () => linkFor('c', sn()), () => {
+      bindShare(root, '#sendC', () => shareUrl(e, m.id, sn), () => {
         const ss = sn();
         return { title: t('ms.send'), text: t('ms.send.text', { m: nm }), mail: mail('checkin', getLang(), { team: ss.w, client: ss.c, contact: first, sender: sender(), job: ss.ti, milestone: nm, link: '{LINK}' }) };
       }, '#mailC');
@@ -670,12 +682,14 @@ export function newPerson(n) {
 }
 
 /* ───────── prezzi e prova ───────── */
-let billing = 'monthly', trialBill = 'monthly';
+let billing = 'monthly';
 /** La fatturazione parte sempre da «Mensile»; «Annuale» è una scelta da fare ogni volta. */
 export const resetBilling = () => { billing = 'monthly'; };
 export function pricing() {
   const an = billing === 'annual';
-  trialBill = billing;
+  const acc = Cloud.signedIn() ? Cloud.access() : null, live = !!acc && !acc.admin && (acc.status === 'active' || acc.status === 'past_due');
+  const cta = id => (!acc ? `#/prova/${id}` : live || acc.admin ? '#/abbonamento' : `#/abbonamento/conferma/${id}/${billing}`);
+  const ctaText = id => (!acc ? t('pr.cta') : live || acc.admin ? t('ac.sub.manage') : t('pr.cta.choose', { plan: planName(id) }));
   const card = id => {
     const p = PLANS[id];
     const feats = [1, 2, 3, 4].map(n => t(`pr.${id}.f${n}`));
@@ -685,7 +699,7 @@ export function pricing() {
       <p class="price"><b>${money(an ? annual(id) : p.monthly)}</b> <span>${an ? t('pr.per.year') : t('pr.per.month')}</span></p>
       ${an ? html`<p class="small anx"><span class="strike">${t('pr.instead', { p: money(annualFull(id)) })}</span> · <b>${t('pr.annual.label')}</b> · ${t('pr.annual.badge')}</p>` : html`<p class="small muted">&nbsp;</p>`}
       <ul class="feats">${feats.map(f => html`<li>${icon('met')}<span>${f}</span></li>`)}</ul>
-      <a class="btn ${p.rec ? 'primary' : ''}" href="#/prova/${id}">${t('pr.cta')}</a>
+      <a class="btn ${p.rec ? 'primary' : ''}" href="${cta(id)}">${ctaText(id)}</a>
     </article>`;
   };
   const em = mail('invite', 'it', {}); void em;
@@ -710,49 +724,6 @@ export function pricing() {
     },
   };
 }
-export function trialStart(plan, n) {
-  if (!PLANS[plan]) return notFound();
-  const v = x => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(x);
-  const roles = [1, 2, 3, 4].map(i => { const l = t('tr.role.r' + i); return { label: l, v: l }; });
-  const teamChips = S.workspaceName() ? [{ label: S.workspaceName(), v: S.workspaceName() }] : [];
-  const steps = () => [
-    { k: 'team', pre: 'tr.team', chips: teamChips },
-    { k: 'size', pre: 'tr.size', type: 'choice', opts: [1, 2, 3, 4, 0].map(i => ({ v: String(i), label: t('tr.size.s' + i) })) },
-    { k: 'role', pre: 'tr.role', chips: roles },
-    { k: 'email', pre: 'tr', input: 'email', valid: v, badMsg: t('tr.bad'), cta: t('tr.cta') },
-  ];
-  const r = stepScreen({ key: 'tr:' + plan, ns: 'tr', steps, n, base: `/prova/${plan}`, exit: '/prezzi', init: { team: S.workspaceName() },
-    finish: d => { S.startTrial(plan, d.email, { team: d.team, size: t('tr.size.s' + d.size), role: d.role, billing: trialBill }); return `/prova/${plan}/fatto`; } });
-  if (r.html) r.html = html`<p class="small kick">${t('tr.h1', { plan: planName(plan) })}</p>${r.html}`;
-  return r;
-}
-/** Testo della richiesta di prova, pronto per mailto: (nessun servizio esterno). */
-function trialMail(plan, tr) {
-  const one = x => String(x || '').replace(/[\r\n]+/g, ' ').trim();
-  const v = { plan: planName(plan), team: one(tr.team) || '—', size: one(tr.size) || '—', role: one(tr.role) || '—', email: one(tr.email), billing: t('tr.bill.' + (tr.billing === 'annual' ? 'annual' : 'monthly')) };
-  const subject = t('tr.req.subject', v), body = t('tr.req.body', v);
-  return { subject, body, href: `mailto:${CONTACT}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}` };
-}
-export function trialDone(plan) {
-  const tr = S.trial(); if (!tr || tr.plan !== plan) return { redirect: '/prezzi' };
-  const m = trialMail(plan, tr);
-  return { name: 'trialdone', ptr: true, html: html`<h1>${t('tr.done.h2')}</h1>
-<ol class="steps done">
-  <li><span class="num ok" aria-hidden="true">${icon('met')}</span><div><p>${t('tr.done.s1', { plan: planName(plan), date: fmtTs(tr.endsAt) })}</p></div></li>
-  <li><span class="num" aria-hidden="true">2</span><div><p><b>${t('tr.done.s2')}</b></p></div></li>
-</ol>
-<div class="actions col"><a class="btn primary big" id="trSend" href="${m.href}">${icon('share')}<span>${t('tr.send')}</span></a></div>
-<p class="notice" id="trNote">${t('tr.sent.note')}</p>
-<section class="card"><h2 class="h2s">${t('tr.prev')}</h2>
-  <p class="small muted">${t('tr.prev.to')}: ${CONTACT}</p><p class="small muted">${t('tr.prev.subj')}:</p><p><b>${m.subject}</b></p>
-  <pre class="mailbody" tabindex="0">${m.body}</pre></section>
-<section class="card"><h3>${t('tr.nomail.h')}</h3><p class="muted">${t('tr.nomail.d')}</p><button class="btn quiet" id="trCopy" type="button">${t('tr.copy')}</button></section>
-<div class="actions col"><a class="btn" id="trOpen" href="#/demo">${t('tr.demo')}${icon('arrow')}</a></div>`,
-    bind(root) {
-      $(root, '#trCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(CONTACT + '\n' + m.subject + '\n\n' + m.body); toast(t('tr.copied')); } catch { /* ignore */ } });
-    } };
-}
-
 /* ───────── impostazioni, email, nota ───────── */
 let wipeArm = false;
 export function settings() {
@@ -760,7 +731,8 @@ export function settings() {
   return {
     name: 'settings', ptr: true,
     html: html`${crumb('/progetti', t('hdr.projects'))}<h1>${t('st.h1')}</h1>
-<section class="card"><h2 class="h2s">${t('st.plan')}</h2><p><b>${t('plan.demo', { plan: planName(p) })}</b></p>${usageLine()}<a class="btn quiet" href="#/prezzi">${t('st.plans')}</a></section>
+<section class="card"><h2 class="h2s">${t('st.plan')}</h2><p><b>${Cloud.signedIn() ? '' : t('plan.demo', { plan: planName(p) })}</b></p>${usageLine()}<a class="btn quiet" href="#/prezzi">${t('st.plans')}</a></section>
+${accountCards()}
 <section class="card"><label for="ws" class="h2s">${t('st.ws')}</label><input id="ws" class="field" value="${S.workspaceName()}" placeholder="${t('st.ws.ph')}" autocomplete="off"><div class="actions"><button class="btn primary" id="wsSave" type="button">${t('st.save')}</button></div></section>
 <section class="card"><h2 class="h2s">${t('st.people')}</h2><p class="small muted">${t('lim.users', { n: ppl.length, max: pl.users })}</p>
   ${ppl.length ? html`<ul class="people">${ppl.map(x => html`<li class="person"><span class="av" aria-hidden="true">${initials(tx(x.name))}</span><span class="grow"><b>${tx(x.name)}</b>${tx(x.role) ? html`<br><span class="small muted">${tx(x.role)}</span>` : ''}</span><button class="btn quiet sm" type="button" data-rm="${x.id}" aria-label="${t('close')}: ${tx(x.name)}">${icon('missed')}</button></li>`)}</ul>` : html`<p class="muted">${t('pp.none')}</p>`}
@@ -769,10 +741,11 @@ export function settings() {
 <section class="card"><h3>${t('st.note')}</h3><a class="btn quiet" href="#/nota">${t('st.note')}</a></section>
 <section class="card"><button class="btn quiet" id="reDemo" type="button">${t('st.demo')}</button><p class="small muted">${t('st.demo.d')}</p>
   <button class="btn quiet" id="dl" type="button">${icon('download')}<span>${t('st.export')}</span></button><p class="small muted">${t('st.export.d')}</p>
-  <button class="btn quiet danger" id="wipe" type="button">${wipeArm ? t('st.wipe.sure') : t('st.wipe')}</button><p class="small muted">${t('st.wipe.d')}</p></section>
-<p class="small muted center">${t('st.ver', { v: '1.1.0' })}</p>`,
+  <button class="btn quiet danger" id="wipe" type="button">${wipeArm ? t('st.wipe.sure') : t('st.wipe')}</button><p class="small muted">${t(Cloud.signedIn() ? 'st.wipe.d.in' : 'st.wipe.d')}</p></section>
+<p class="small muted center">${t('st.ver', { v: '1.2.0' })}</p>`,
     bind(root) {
-      $(root, '#wsSave').addEventListener('click', () => { S.setWorkspaceName($(root, '#ws').value); toast(t('st.saved')); });
+      bindAccount(root);
+      $(root, '#wsSave').addEventListener('click', () => { Cloud.setTeamName($(root, '#ws').value); toast(t('st.saved')); });
       root.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', () => { S.removePerson(b.dataset.rm); env.rerender(); }));
       $(root, '#reDemo').addEventListener('click', () => { S.seedDemo(true); go('/i/demo'); });
       $(root, '#dl').addEventListener('click', () => download('altravi-team-dati.json', JSON.stringify(S.get(), null, 2), 'application/json'));
@@ -851,8 +824,34 @@ export function clientWho() {
   if (r.html) r.html = html`${cvBar(cv)}${r.html}`;
   r.client = true; return r;
 }
+function clientDoneCloud(cv) {
+  const sn = cv.snap, review = !sn.m;
+  const panel = (h, d, retry) => html`<h1>${h}</h1><p class="lead">${d}</p>${retry ? html`<div class="actions"><button class="btn primary" id="cvRetry" type="button"><span>${t('ac.cl.retry')}</span></button></div>` : ''}${cvLeave(cv)}`;
+  return {
+    name: 'client-done', ptr: false, client: true,
+    html: html`${cvBar(cv)}<div id="cdBox">${cv.sent ? panel(t('ac.cl.sent.h'), t('ac.cl.sent.d')) : html`<h1>${t('ac.cl.sending')}</h1><p class="spin" aria-hidden="true"></p>`}</div>`,
+    async bind(root) {
+      if (cv.sent) return;
+      const box = $(root, '#cdBox');
+      const send = async () => {
+        box.innerHTML = html`<h1>${t('ac.cl.sending')}</h1><p class="spin" aria-hidden="true"></p>`.s;
+        const answers = Object.fromEntries(Object.entries(cv.answers || {}).map(([k, v]) => [k, [v.r, v.note || '']]));
+        const r = await Cloud.clientSend(cv.cloud, { by: cv.by || '', note: review ? (cv.note || '') : '', answers });
+        let out;
+        if (r.ok) { cv.sent = true; S.saveCV(cv); out = panel(t('ac.cl.sent.h'), t('ac.cl.sent.d')); }
+        else if (r.code === 'ALREADY_ANSWERED') { cv.sent = true; S.saveCV(cv); out = panel(t('ac.cl.already.h'), t('ac.cl.already.d')); }
+        else if (r.code === 'PAUSED') out = panel(t('ac.cl.paused.h'), t('ac.cl.paused.d'));
+        else out = panel(t('ac.cl.fail.h'), t('ac.cl.fail.d'), true);
+        box.innerHTML = out.s;
+        const rb = $(box, '#cvRetry'); if (rb) rb.addEventListener('click', send);
+      };
+      send();
+    },
+  };
+}
 export function clientDone() {
   const cv = S.loadCV(); if (!cv || !cv.done) return noCV();
+  if (cv.cloud) return clientDoneCloud(cv);
   const sn = cv.snap, review = !sn.m;
   const rep = () => ({ v: 1, e: sn.e, m: sn.m || '', t: sn.k || '', by: cv.by || '', rv: review ? 1 : 0, n: cv.note || '', a: Object.fromEntries(Object.entries(cv.answers || {}).map(([k, v]) => [k, [v.r, v.note || '']])) });
   return {
@@ -868,3 +867,5 @@ ${cvLeave(cv)}`,
     },
   };
 }
+
+export { crumb, need, $, money, planName, usageLine };
