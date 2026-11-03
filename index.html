@@ -1,56 +1,38 @@
 <!doctype html>
 <html lang="it">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Altravì — team e cliente allineati</title>
-<meta name="description" content="Il livello di allineamento tra chi lavora e chi paga.">
-<meta name="theme-color" content="#060912">
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Altravì">
-<link rel="stylesheet" href="/assets/css/b2b.css">
-<script src="/assets/js/lang-boot.js"></script>
-</head>
-<body>
-<a class="skip" href="#view" data-i18n="skip">Vai al contenuto</a>
-<header class="top">
-  <a class="wordmark" href="#/" data-i18n-aria="brand.home" aria-label="Altravì, inizio">Altravì</a>
-  <div class="top-actions">
-    <select class="icon-btn lang-btn" id="langSel" data-i18n-aria="lang.aria" aria-label="Lingua"></select>
-    <button class="icon-btn" id="textSize" type="button" aria-pressed="false"><span aria-hidden="true">A+</span><span class="sr" id="textSizeLbl">Testo più grande</span></button>
-    <a class="icon-btn" href="#/impostazioni" data-i18n-aria="hdr.settings" aria-label="Impostazioni">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-    </a>
-  </div>
-</header>
-<div class="acct" id="acct" role="status" hidden></div>
-<main id="view" tabindex="-1"><noscript><p>Altravì ha bisogno di JavaScript per funzionare. / Altravì needs JavaScript to work.</p></noscript></main>
-<nav class="tabs" id="tabs" hidden aria-label="Sezioni dell’incarico"></nav>
-<footer class="site-footer" role="contentinfo">
-  <div class="footer-in">
-    <div>
-      <p class="f-brand">Pi.Gi Service</p>
-      <address>
-        Via Guido Reni 8, 35133 Padova (PD)<br>
-        P.IVA 05770260288<br>
-        <a href="mailto:info@pigiservice.com">info@pigiservice.com</a><br>
-        PEC: <a href="mailto:pigiservice@pec.it">pigiservice@pec.it</a><br>
-        Tel. <a href="tel:+393520966114">+39 352 0966114</a>
-      </address>
-    </div>
-    <nav data-i18n-aria="footer.aria" aria-label="Informazioni legali">
-      <a href="privacy.html" data-i18n="footer.privacy">Privacy</a>
-      <a href="termini.html" data-i18n="footer.terms">Termini</a>
-      <a href="cookie.html" data-i18n="footer.cookie">Cookie</a>
-      <a href="#/nota" data-i18n="footer.note">Dati e link cliente</a>
-      <a href="#/prezzi" data-i18n="footer.pricing">Prezzi</a>
-    </nav>
-  </div>
-</footer>
-<script type="module" src="/assets/js/app.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Altravi OS — il sistema operativo del tuo team</title>
+    <meta name="description" content="Clienti, trattative, attività, note e AI in un solo posto. Mobile-first e funziona anche offline." />
+    <meta name="theme-color" content="#060912" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Altravi OS" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <script>
+      // Tema e dimensione del testo prima del primo disegno (niente lampo bianco).
+      try {
+        var p = JSON.parse(localStorage.getItem('altravi-os-prefs') || 'null') || {};
+        var dark = p.theme === 'dark' || ((p.theme || 'auto') === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        if (p.scale) document.documentElement.style.fontSize = p.scale + '%';
+        if (p.lang) document.documentElement.lang = p.lang;
+      } catch (e) {}
+    </script>
+    <script type="module" crossorigin src="/assets/index-BhD15Ejj.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-WkwZ5CU-.js">
+    <link rel="modulepreload" crossorigin href="/assets/react-Dlz1Yfk4.js">
+    <link rel="modulepreload" crossorigin href="/assets/dexie-DacEE8u4.js">
+    <link rel="modulepreload" crossorigin href="/assets/hooks-D-aQ-zQw.js">
+    <link rel="modulepreload" crossorigin href="/assets/supabase-DzUOT4m4.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-C-RjIgwh.css">
+  <link rel="manifest" href="/manifest.webmanifest"></head>
+  <body>
+    <div id="root"></div>
+    <noscript>Altravi OS richiede JavaScript. / Altravi OS requires JavaScript.</noscript>
+  </body>
 </html>
